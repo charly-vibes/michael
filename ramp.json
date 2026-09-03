@@ -4,29 +4,85 @@
   "colorSpace": "oklch",
   "variants": {
     "light": {
-      "bg":    { "L": 0.97,  "hex": "#F5F5F5", "role": "background" },
-      "bgAlt": { "L": 0.94,  "hex": "#EBEBEB", "role": "alt background, faint fills" },
-      "selectionFill": { "L": 0.88, "hex": "#D7D7D7", "role": "selection overlay" },
-      "ink":    { "L": 0.13,  "hex": "#070707" },
-      "strong": { "L": 0.30,  "hex": "#2E2E2E" },
-      "fg":     { "L": 0.42,  "hex": "#4D4D4D" },
-      "muted":  { "L": 0.545, "hex": "#707070" },
-      "faint":  { "L": 0.645, "hex": "#8D8D8D" }
+      "bg": {
+        "L": 0.97,
+        "hex": "#F5F5F5",
+        "role": "background"
+      },
+      "bgAlt": {
+        "L": 0.94,
+        "hex": "#EBEBEB",
+        "role": "alt background, faint fills"
+      },
+      "selectionFill": {
+        "L": 0.88,
+        "hex": "#D7D7D7",
+        "role": "selection overlay"
+      },
+      "ink": {
+        "L": 0.13,
+        "hex": "#070707"
+      },
+      "strong": {
+        "L": 0.3,
+        "hex": "#2E2E2E"
+      },
+      "fg": {
+        "L": 0.43,
+        "hex": "#505050"
+      },
+      "muted": {
+        "L": 0.545,
+        "hex": "#707070"
+      },
+      "faint": {
+        "L": 0.645,
+        "hex": "#8D8D8D"
+      }
     },
     "dark": {
-      "bg":    { "L": 0.13,  "hex": "#070707", "role": "background" },
-      "bgAlt": { "L": 0.20,  "hex": "#161616", "role": "alt background, faint fills" },
-      "selectionFill": { "L": 0.30, "hex": "#2E2E2E", "role": "selection overlay" },
-      "ink":    { "L": 0.97,  "hex": "#F5F5F5" },
-      "strong": { "L": 0.80,  "hex": "#BEBEBE" },
-      "fg":     { "L": 0.70,  "hex": "#9E9E9E" },
-      "muted":  { "L": 0.58,  "hex": "#7A7A7A" },
-      "faint":  { "L": 0.48,  "hex": "#5D5D5D" }
+      "bg": {
+        "L": 0.13,
+        "hex": "#070707",
+        "role": "background"
+      },
+      "bgAlt": {
+        "L": 0.2,
+        "hex": "#161616",
+        "role": "alt background, faint fills"
+      },
+      "selectionFill": {
+        "L": 0.3,
+        "hex": "#2E2E2E",
+        "role": "selection overlay"
+      },
+      "ink": {
+        "L": 0.97,
+        "hex": "#F5F5F5"
+      },
+      "strong": {
+        "L": 0.82,
+        "hex": "#C4C4C4",
+        "role": "kept by judge data: strong vs fg was mud at 4-bit"
+      },
+      "fg": {
+        "L": 0.69,
+        "hex": "#9B9B9B"
+      },
+      "muted": {
+        "L": 0.58,
+        "hex": "#7A7A7A"
+      },
+      "faint": {
+        "L": 0.48,
+        "hex": "#5D5D5D"
+      }
     }
   },
   "notes": [
     "Endpoints are off-polar (never #000/#FFF) per Flexoki.",
     "Text levels are polarity-tuned: mirroring light L values into dark fails WCAG because gamma skews ratios; dark levels were re-derived against the gates.",
-    "Adjacent text levels keep dL >= 0.10 OKLCH so grayscale-forced/4-bit screens preserve the hierarchy."
+    "Adjacent text levels keep dL >= 0.10 OKLCH so grayscale-forced/4-bit screens preserve the hierarchy.",
+    "v2: dark strong/fg widened (dL 0.10 -> 0.13) after eval showed types/function_names BROKEN at 4-bit; light fg nudged 0.43."
   ]
 }

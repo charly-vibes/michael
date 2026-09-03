@@ -167,6 +167,8 @@ def main():
     ap.add_argument('--filter', default='')
     ap.add_argument('--quant', choices=['full', '4bit', 'both'], default='both')
     ap.add_argument('--no-cache', action='store_true')
+    ap.add_argument('--repeats', type=int, default=1,
+                    help='grades per image; median is kept (judge noise is +-0.5 at n=1)')
     ap.add_argument('--langs', default='',
                     help='comma-separated subset, e.g. "python,rust" (default: all)')
     ap.add_argument('--themes', default='',
@@ -200,7 +202,15 @@ def main():
           f'with {args.model}, {args.jobs} at a time\n')
 
     def grade(img):
-        return img, run_pi(img, args.model)
+        verdicts = [run_pi(img, args.model) for _ in range(args.repeats)]
+        valid = sorted((v for v in verdicts if v['separation'] >= 0),
+                       key=lambda v: v['separation'])
+        if not valid:
+            return img, verdicts[0]
+        med = valid[len(valid) // 2]  # the median-run verdict, unmodified
+        med['repeats'] = [v['separation'] for v in verdicts]
+        med['all_verdicts'] = verdicts
+        return img, med
 
     cache_file = cache_path
 
