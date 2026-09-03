@@ -16,6 +16,11 @@ eval: build
     uv run bench/render.py
     uv run bench/eval.py --jobs 2
 
+# Light eval: python corpus only, 4-bit, michael vs winning baseline (~6 images)
+eval-quick: build
+    uv run bench/eval.py --jobs 3 --quant 4bit --langs python \
+        --themes "michael,solarized-light"
+
 # Lint Python sources
 lint:
     uv run ruff check bench generators

@@ -68,10 +68,14 @@ hue destroyed). Each render gets a full PNG + a 4-bit quantized version
 (token-class separation, readability, collisions) and ranks the themes:
 
 ```sh
-just eval                       # render + grade everything (~72 images)
-uv run bench/eval.py --filter michael   # subset
-uv run bench/eval.py --model google/gemma-4-31b-it:free  # free model
+just eval-quick   # ~6 images: python corpus, 4-bit, michael vs solarized-light
+just eval         # full matrix: 6 themes x 6 languages x 2 quantizations
+uv run bench/eval.py --langs python,rust --themes michael   # custom subset
+uv run bench/eval.py --model google/gemma-4-31b-it:free     # free model
 ```
+
+Iteration pattern: `just eval-quick` while tuning the ramp (verdicts are
+cached and resume across runs), `just eval` for a release-grade pass.
 
 Results land in `corpus/eval-results.json`. The final check is still a
 real e-ink/grayscale screen — the judge is a proxy.

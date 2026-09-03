@@ -167,13 +167,21 @@ def main():
     ap.add_argument('--filter', default='')
     ap.add_argument('--quant', choices=['full', '4bit', 'both'], default='both')
     ap.add_argument('--no-cache', action='store_true')
+    ap.add_argument('--langs', default='',
+                    help='comma-separated subset, e.g. "python,rust" (default: all)')
+    ap.add_argument('--themes', default='',
+                    help='comma-separated substrings, e.g. "michael-light,solarized-light"')
     args = ap.parse_args()
 
+    lang_set = tuple(s.strip() for s in args.langs.split(',') if s.strip()) or LANGS
+    theme_subs = tuple(s.strip() for s in args.themes.split(',') if s.strip())
     images = sorted(
         os.path.join(RENDER_DIR, f) for f in os.listdir(RENDER_DIR)
         if f.endswith('.png') and args.filter in f
         and (args.quant == 'both'
-             or (args.quant == '4bit') == f.endswith('-4bit.png')))
+             or (args.quant == '4bit') == f.endswith('-4bit.png'))
+        and any(f.startswith(f'{lang}-') for lang in lang_set)
+        and (not theme_subs or any(sub in f for sub in theme_subs)))
     if not images:
         sys.exit(f'no images matching filter={args.filter!r}')
 
