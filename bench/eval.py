@@ -1,43 +1,80 @@
 #!/usr/bin/env python3
-"""Vision eval: pi judges rendered themes for clean token separation.
+"""Vision eval: pi judges rendered themes with per-class diagnostic detail.
 
-For every theme x language x quantization image, a vision model (via headless
-pi + OpenRouter) grades the render against a rubric and reports structured
-verdicts. Aggregate results rank michael against the Solarized/Flexoki
-baselines AFTER luminance-preserving grayscale conversion — i.e., what the
-user's grayscale-forced displays actually show.
+For every theme x language x quantization image, a vision model (headless pi +
+OpenRouter) grades each token class for distinctness and explains what is
+wrong. Output: corpus/eval-results.json (raw verdicts) and
+corpus/eval-report.md (per-theme diagnostics: weak classes, collision matrix,
+judge's root-cause analysis).
+
+Verdicts are cached: images already graded in eval-results.json are skipped
+unless --no-cache.
 
 Usage:
-    uv run bench/eval.py [--model google/gemini-2.5-flash-lite] [--jobs 4]
-        [--filter michael]     # subset by substring
-        [--quant full|4bit|both]
+    uv run bench/eval.py [--model google/gemini-2.5-flash-lite] [--jobs 2]
+        [--filter michael] [--quant full|4bit|both] [--no-cache]
 """
 import argparse
-import concurrent.futures as cf
 import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RENDER_DIR = os.path.join(HERE, '..', 'corpus', 'render')
+LANGS = ('typescript', 'clojure', 'python', 'julia', 'rust', 'csharp')
+CLASSES = ('keywords', 'types', 'function_names', 'strings', 'numbers', 'comments', 'punctuation')
 
-RUBRIC = """You are grading a code-editor color theme rendered as a screenshot. \
-The screenshot may be in color or grayscale; grade ONLY what is visible.
+RUBRIC = f"""You are grading a code-editor theme rendered as a screenshot of source code. \
+The image may be color or grayscale; grade ONLY what is visible in the image.
 
-Rate the following on integer scales:
-- "separation": 0-5, how cleanly distinct the token classes are \
-(keywords, types, function names, strings, numbers, comments, punctuation). \
-5 = every class instantly distinguishable; 0 = wall of uniform text.
-- "readability": 0-5, comfort for reading a full file of this code \
-(contrast of body text, harshness, visual noise).
-- "collisions": list any pairs of token classes that are hard to tell apart, \
-e.g. ["strings vs comments", "types vs function names"]. Empty list if none.
-- "notes": one short sentence, max 20 words.
+For EACH token class below, judge how visually distinct it is from the other \
+classes in this exact screenshot:
+{', '.join(CLASSES)}.
+
+Score each class 0-3:
+- 3 = instantly distinguishable from all other classes
+- 2 = distinguishable with attention
+- 1 = confusable with at least one other class (name the confusable partner in notes)
+- 0 = indistinguishable from other text
+
+Then:
+- "closest_pair": the two classes that are MOST confusable with each other, \
+e.g. "strings vs comments"
+- "root_cause": the single most impactful change that would improve this render, \
+e.g. "comment gray too close to string gray", "keyword bolding too subtle", \
+"body text too low contrast"
+- "separation": 0-5 overall separation score
+- "readability": 0-5 comfort reading a full file (contrast, strain, noise)
+- "notes": one short sentence, max 20 words
 
 Answer with ONLY a JSON object, no markdown fences:
-{"separation": <int>, "readability": <int>, "collisions": ["..."], "notes": "..."}"""
+{{"classes": {{"keywords": {{"distinct": 0, "notes": "..."}}, ...}}, \
+"closest_pair": "...", "root_cause": "...", "separation": 0, "readability": 0, "notes": "..."}}"""
+
+
+def parse_theme_image(fname):
+    """python-michael-dark-4bit.png -> ('python', 'michael-dark', '4bit').
+
+    Also repairs legacy cache keys like 'python-michael-dark-full-full-full'.
+    """
+    stem = fname.removesuffix('.png')
+    quant = 'full'
+    if stem.endswith('-4bit'):
+        stem = stem[:-len('-4bit')]
+        quant = '4bit'
+    while stem.endswith('-full'):  # legacy repeated suffixes
+        stem = stem[:-len('-full')]
+        if not fname.endswith('-4bit.png'):
+            quant = 'full'
+    for lang in LANGS:
+        if stem.startswith(f'{lang}-'):
+            theme = stem[len(lang) + 1:]
+            if not theme.endswith('-4bit'):
+                return lang, theme, quant
+    return None
 
 
 def run_pi(image_path: str, model: str) -> dict:
@@ -49,31 +86,87 @@ def run_pi(image_path: str, model: str) -> dict:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180, check=False)
         out = proc.stdout.strip()
     except subprocess.TimeoutExpired:
-        return {'error': 'timeout', 'separation': -1, 'readability': -1,
-                'collisions': [], 'notes': 'timeout'}
-    # strip accidental fences
+        return {'error': 'timeout', 'classes': {}, 'closest_pair': '',
+                'root_cause': '', 'separation': -1, 'readability': -1, 'notes': 'timeout'}
     if out.startswith('```'):
         out = out.strip('`').removeprefix('json').strip()
     try:
         start, end = out.find('{'), out.rfind('}')
         verdict = json.loads(out[start:end + 1])
     except (json.JSONDecodeError, ValueError):
-        return {'error': proc.stdout[:200] + proc.stderr[:200],
-                'separation': -1, 'readability': -1, 'collisions': [],
-                'notes': 'unparseable'}
+        return {'error': (proc.stdout + proc.stderr)[:200], 'classes': {},
+                'closest_pair': '', 'root_cause': '', 'separation': -1,
+                'readability': -1, 'notes': 'unparseable'}
+    verdict.setdefault('classes', {})
+    verdict.setdefault('closest_pair', '')
+    verdict.setdefault('root_cause', '')
     verdict.setdefault('separation', -1)
     verdict.setdefault('readability', -1)
-    verdict.setdefault('collisions', [])
     verdict.setdefault('notes', '')
     return verdict
+
+
+def mean(xs):
+    xs = [x for x in xs if x >= 0]
+    return sum(xs) / len(xs) if xs else -1
+
+
+def write_report(results, model):
+    """Per-theme diagnostic markdown: weak classes, collision matrix, root causes."""
+    themes = {}
+    for (lang, theme, quant), v in results.items():
+        if v['separation'] < 0:
+            continue
+        t = themes.setdefault(theme, {'sep': [], 'read': [], 'classes': {c: [] for c in CLASSES},
+                                      'pairs': Counter(), 'roots': [], 'langs': {}})
+        t['sep'].append(v['separation'])
+        t['read'].append(v['readability'])
+        for c in CLASSES:
+            entry = v['classes'].get(c)
+            if entry and 'distinct' in entry:
+                t['classes'][c].append(entry['distinct'])
+        if v.get('closest_pair'):
+            t['pairs'][v['closest_pair']] += 1
+        if v.get('root_cause'):
+            t['roots'].append(f"- ({lang}, {quant}) {v['root_cause']}")
+        t['langs'].setdefault(lang, []).append(v['separation'])
+
+    lines = [f'# michael eval report — judge: {model}\n']
+    lines.append('| theme | separation | readability | samples |')
+    lines.append('|---|---|---|---|')
+    for theme, t in sorted(themes.items(), key=lambda kv: -mean(kv[1]['sep'])):
+        lines.append(f"| {theme} | {mean(t['sep']):.2f} | {mean(t['read']):.2f} | {len(t['sep'])} |")
+
+    for theme, t in sorted(themes.items(), key=lambda kv: -mean(kv[1]['sep'])):
+        lines.append(f'\n## {theme}\n')
+        lines.append('### Class distinctness (mean 0-3)\n')
+        lines.append('| class | distinct | verdict |')
+        lines.append('|---|---|---|')
+        for c in CLASSES:
+            m = mean(t['classes'][c])
+            verdict = ('solid' if m >= 2.5 else 'weak' if m >= 1.5 else 'BROKEN') if m >= 0 else '?'
+            lines.append(f'| {c} | {m:.2f} | {verdict} |')
+        lines.append('\n### Most-colliding pairs\n')
+        for pair, n in t['pairs'].most_common(5):
+            lines.append(f'- {n}x: {pair}')
+        lines.append('\n### Judge root causes (verbatim)\n')
+        lines.extend(t['roots'][:8])
+        worst_lang = min(t['langs'], key=lambda l: mean(t['langs'][l]))
+        lines.append(f'\nWorst language: **{worst_lang}** (sep {mean(t["langs"][worst_lang]):.2f})')
+
+    out = os.path.join(HERE, '..', 'corpus', 'eval-report.md')
+    with open(out, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+    print(f'report: {out}')
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model', default='google/gemini-2.5-flash-lite')
-    ap.add_argument('--jobs', type=int, default=4)
+    ap.add_argument('--jobs', type=int, default=2)
     ap.add_argument('--filter', default='')
     ap.add_argument('--quant', choices=['full', '4bit', 'both'], default='both')
+    ap.add_argument('--no-cache', action='store_true')
     args = ap.parse_args()
 
     images = sorted(
@@ -82,57 +175,61 @@ def main():
         and (args.quant == 'both'
              or (args.quant == '4bit') == f.endswith('-4bit.png')))
     if not images:
-        sys.exit(f'no images matching filter={args.filter!r} in {RENDER_DIR}')
+        sys.exit(f'no images matching filter={args.filter!r}')
 
-    print(f'evaluating {len(images)} images with {args.model}, {args.jobs} at a time\n')
+    cache_path = os.path.join(HERE, '..', 'corpus', 'eval-results.json')
     results = {}
-    with cf_pool(args.jobs) as pool:
-        futures = {pool.submit(run_pi, img, args.model): img for img in images}
-        for done, fut in enumerate(cf.as_completed(futures), 1):
-            img = futures[fut]
-            v = fut.result()
-            results[img] = v
-            print(f"[{done:2d}/{len(images)}] {os.path.basename(img):45s} "
+    if not args.no_cache and os.path.exists(cache_path):
+        with open(cache_path) as f:
+            cached = json.load(f).get('results', {})
+        for fname, v in cached.items():
+            key = parse_theme_image(fname)
+            if key and v.get('separation', -1) >= 0 and v.get('classes'):
+                results[key] = v
+    todo = [img for img in images
+            if parse_theme_image(os.path.basename(img)) not in results]
+    print(f'{len(images)} images, {len(results)} cached, {len(todo)} to grade '
+          f'with {args.model}, {args.jobs} at a time\n')
+
+    def grade(img):
+        return img, run_pi(img, args.model)
+
+    cache_file = cache_path
+
+    def save():
+        with open(cache_file, 'w') as f:
+            json.dump({'model': args.model,
+                       'results': {f'{l}-{t}-{q}': v
+                                   for (l, t, q), v in results.items()}},
+                      f, indent=2)
+
+    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        for done, (img, v) in enumerate(pool.map(grade, todo), 1):
+            results[parse_theme_image(os.path.basename(img))] = v
+            save()  # incremental: a timeout keeps completed verdicts
+            print(f"[{done:2d}/{len(todo)}] {os.path.basename(img):42s} "
                   f"sep={v['separation']} read={v['readability']} "
-                  f"collisions={len(v['collisions'])}")
+                  f"worst={v.get('closest_pair', '')[:40]}", flush=True)
 
-    # aggregate by theme
-    print('\n=== AGGREGATE (by theme) ===')
-    langs = ('typescript', 'clojure', 'python', 'julia', 'rust', 'csharp')
-    themes = {}
-    for img, v in results.items():
-        stem = os.path.basename(img).removesuffix('.png').removesuffix('-4bit')
-        theme = stem
-        for lang in langs:  # filenames are <lang>-<theme>[-4bit].png
-            if stem.startswith(f'{lang}-'):
-                theme = stem[len(lang) + 1:]
-                break
-        t = themes.setdefault(theme, {'sep': [], 'read': [], 'coll': 0, 'n': 0})
-        if v['separation'] >= 0:
-            t['sep'].append(v['separation'])
-            t['read'].append(v['readability'])
-            t['coll'] += len(v['collisions'])
-            t['n'] += 1
+    save()
 
-    rows = []
-    for theme, t in themes.items():
-        sep = sum(t['sep']) / len(t['sep']) if t['sep'] else -1
-        read = sum(t['read']) / len(t['read']) if t['read'] else -1
-        rows.append((sep, read, t['coll'], t['n'], theme))
-    rows.sort(reverse=True)
-    print(f"{'theme':30s} {'sep':>5s} {'read':>5s} {'coll':>4s} {'n':>3s}")
-    for sep, read, coll, n, theme in rows:
-        print(f'{theme:30s} {sep:5.2f} {read:5.2f} {coll:4d} {n:3d}')
+    # console summary: per-theme weak classes
+    print('\n=== PER-CLASS DIAGNOSTICS (theme means, 0-3) ===')
+    by_theme = {}
+    for (lang, theme, quant), v in results.items():
+        if v['separation'] < 0:
+            continue
+        t = by_theme.setdefault(theme, {c: [] for c in CLASSES})
+        for c in CLASSES:
+            entry = v['classes'].get(c)
+            if entry and 'distinct' in entry:
+                t[c].append(entry['distinct'])
+    for theme, t in sorted(by_theme.items()):
+        cells = ' '.join(f'{c[:4]}={mean(t[c]):.1f}' for c in CLASSES)
+        print(f'{theme:24s} {cells}')
 
-    out = os.path.join(HERE, '..', 'corpus', 'eval-results.json')
-    with open(out, 'w') as f:
-        json.dump({'model': args.model, 'results': {os.path.basename(k): v for k, v in results.items()}}, f, indent=2)
-    print(f'\nfull verdicts: {out}')
+    write_report(results, args.model)
 
-
-def cf_pool(jobs):
-    """ThreadPoolExecutor helper (named for readability)."""
-    return ThreadPoolExecutor(max_workers=jobs)
 
 if __name__ == '__main__':
     main()
