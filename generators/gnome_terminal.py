@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Generate GNOME Terminal profile (dconf) for both variants."""
-import json, os
+import json
+import os
+
 
 def load():
     here = os.path.dirname(os.path.abspath(__file__))
-    ramp = json.load(open(os.path.join(here, '..', 'ramp.json')))
-    tokens = json.load(open(os.path.join(here, '..', 'tokens.json')))
+    with open(os.path.join(here, '..', 'ramp.json')) as fh:
+        ramp = json.load(fh)
+    with open(os.path.join(here, '..', 'tokens.json')) as fh:
+        tokens = json.load(fh)
     return ramp, tokens
 
 # ANSI slot assignment: 16 slots from the ramp + weight multiplexing via bright.
@@ -40,18 +44,18 @@ def emit(variant_name, v):
     lines = [
         f"# michael ({variant_name}) — generated, do not edit",
         "# Usage: dconf load /org/gnome/terminal/legacy/profiles:/ < this file",
-        "[profiles:/:michael-%s]" % variant_name,
-        "visible-name='michael %s'" % variant_name,
-        "background-color='%s'" % bg,
-        "foreground-color='%s'" % fg,
+        f"[profiles:/:michael-{variant_name}]",
+        f"visible-name='michael {variant_name}'",
+        f"background-color='{bg}'",
+        f"foreground-color='{fg}'",
         "use-theme-colors=false",
-        "cursor-background-color='%s'" % fg,
-        "cursor-foreground-color='%s'" % bg,
+        f"cursor-background-color='{fg}'",
+        f"cursor-foreground-color='{bg}'",
         "cursor-blink-mode='off'",      # e-ink ghosting
         "cursor-shape='ibeam'",          # bar cursor, not block
         "bold-is-bright=true",           # weight channel doubles as level channel
         "scrollbar-policy='never'",
-        "palette=[%s]" % ", ".join(f"'{c}'" for c in pal),
+        "palette=[" + ", ".join(f"'{c}'" for c in pal) + "]",
     ]
     return "\n".join(lines) + "\n"
 
@@ -61,5 +65,6 @@ if __name__ == '__main__':
     os.makedirs(out, exist_ok=True)
     for name in ('light', 'dark'):
         path = os.path.join(out, f'michael-{name}.dconf')
-        open(path, 'w').write(emit(name, ramp['variants'][name]))
+        with open(path, 'w') as fh:
+            fh.write(emit(name, ramp['variants'][name]))
         print(f"wrote {path}")

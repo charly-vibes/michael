@@ -41,17 +41,26 @@ All gates must pass for **both** variants before any output ships.
 
 ## Commands
 
+Environment is managed with **uv** (`uv sync` after clone).
+
 ```sh
+uv sync            # set up .venv (pillow, pygments, ruff)
 just build         # regenerate out/
-just check         # build + run all gates
+just check         # build + run all gates + render corpus PNGs
+just lint          # ruff
 just install-gnome # dconf profiles
 just install-doom  # copy themes to ~/.doom.d/themes/
 just install-vscode
 ```
 
-## Corpus validation (manual, per release)
+## Corpus rendering
 
-Render one real file per language (Python, Julia, Rust, TypeScript, Clojure, C#)
-plus a diff view and an LSP diagnostics view, screenshot, quantize to 16 grays,
-and confirm every token state remains distinguishable. See tokens.json for the
-full state list (~24 states) that must survive.
+`bench/render.py` renders the six-language corpus (Python, Julia, Rust,
+TypeScript, Clojure, C#) through the actual token grammar using Pygments +
+JetBrains Mono, in both variants, into `corpus/render/`:
+
+- `<lang>-light.png` / `<lang>-dark.png` — full-fidelity render
+- `<lang>-*-4bit.png` — quantized to 16 grays (e-ink simulation)
+
+Inspect the 4-bit PNGs to confirm every token state survives the panel;
+the final check is still a real e-ink/grayscale screen.

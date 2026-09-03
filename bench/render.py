@@ -1,0 +1,270 @@
+#!/usr/bin/env python3
+"""Render michael's semantic grammar onto real code, as PNGs.
+
+Pipeline: source file -> pygments lex -> tokens mapped through tokens.json
+-> drawn with JetBrains Mono (weight/style = real font files) -> PNG.
+Also emits 4-bit (16-gray) quantized versions to simulate e-ink rendering.
+
+Usage: python3 bench/render.py   (writes to corpus/render/)
+"""
+import json
+import os
+
+from PIL import Image, ImageDraw
+from pygments import lex
+from pygments.lexers import get_lexer_by_name
+from pygments.token import Token
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.join(HERE, '..')
+FONT_DIR = '/usr/share/fonts/jetbrains-mono-fonts'
+FONTS = {
+    (False, False): 'JetBrainsMono-Regular.otf',
+    (True, False):  'JetBrainsMono-Bold.otf',
+    (False, True):  'JetBrainsMono-Italic.otf',
+    (True, True):   'JetBrainsMono-BoldItalic.otf',
+}
+
+# ---------------------------------------------------------------- corpus ---
+CORPUS = {
+    'python.py': ('python', '''\
+from dataclasses import dataclass, field
+import re
+
+MAX_RETRIES: int = 3
+
+@dataclass(frozen=True)
+class Fetcher:
+    """Fetches pages with retries and backoff."""
+    base_url: str
+    timeout: float = 5.0
+    headers: dict[str, str] = field(default_factory=dict)
+
+    async def fetch(self, path: str, session) -> str:
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = await session.get(url, timeout=self.timeout)
+                resp.raise_for_status()
+                return resp.text
+            except ConnectionError as err:
+                if attempt == MAX_RETRIES - 1:
+                    raise RuntimeError(f"failed: {url}") from err
+        # unreachable when MAX_RETRIES > 0
+        return ""
+'''),
+    'julia.jl': ('julia', '''\
+module Optics
+
+export lensmaker
+
+"""Thin-lens focal length via the lensmaker equation."""
+function lensmaker(n::Float64, r1::Float64, r2::Float64; thick=0.0)
+    inv_f = (n - 1) * (1/r1 - 1/r2 + (n-1)*thick/(n*r1*r2))
+    return 1 / inv_f
+end
+
+struct Surface
+    radius::Float64
+    convex::Bool
+end
+
+function power(surfaces::Vector{Surface}, n::Float64)
+    mapreduce(s -> (n - 1) / s.radius, +, surfaces; init=0.0)
+end
+
+end # module
+'''),
+    'rust.rs': ('rust', '''\
+use std::collections::HashMap;
+use std::fmt;
+
+#[derive(Debug, Clone)]
+pub enum Node {
+    Leaf { value: i64 },
+    Branch(Box<Node>, Box<Node>),
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Node::Leaf { value } => write!(f, "{}", value),
+            Node::Branch(l, r) => write!(f, "({} {})", l, r),
+        }
+    }
+}
+
+fn walk(node: &Node, depth: usize, out: &mut HashMap<usize, usize>) {
+    match node {
+        Node::Leaf { .. } => *out.entry(depth).or_insert(0) += 1,
+        Node::Branch(l, r) => { walk(l, depth + 1, out); walk(r, depth + 1, out); }
+    }
+}
+'''),
+    'typescript.ts': ('typescript', '''\
+export interface Options {
+  retries?: number;
+  baseUrl: string;
+}
+
+type Handler = (req: Request) => Promise<Response>;
+
+const DEFAULT_TIMEOUT = 5_000;
+
+export class Router {
+  private routes = new Map<string, Handler>();
+
+  add(path: string, handler: Handler): this {
+    if (this.routes.has(path)) {
+      throw new Error(`duplicate route: ${path}`);
+    }
+    this.routes.set(path, handler);
+    return this;
+  }
+
+  async handle(req: Request): Promise<Response> {
+    const handler = this.routes.get(new URL(req.url).pathname)
+      ?? (() => new Response("not found", { status: 404 }));
+    return handler(req);
+  }
+}
+'''),
+    'clojure.clj': ('clojure', '''\
+(ns shop.cart
+  "Shopping cart with line-item totals."
+  (:require [clojure.spec.alpha :as s]))
+
+(defonce ^:private registry (atom {}))
+
+(s/def ::price pos?)
+(s/def ::qty nat-int?)
+(s/def ::line (s/keys :req [::price ::qty]))
+
+(defn total
+  "Sum of price*qty over lines, rounded to cents."
+  [lines]
+  (->> lines
+       (filter #(s/valid? ::line %))
+       (map (fn [{:keys [::price ::qty]}] (* price qty)))
+       (reduce + 0.0)
+       (as-> v (Math/round (* 100 v)))))
+
+(defn register! [id lines]
+  (swap! registry assoc id {:lines lines :total (total lines)}))
+'''),
+    'csharp.cs': ('csharp', '''\
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Shop;
+
+public record Line(decimal Price, int Qty);
+
+public sealed class Cart
+{
+    private static readonly decimal TaxRate = 0.19m;
+    private readonly List<Line> _lines = new();
+
+    public decimal Net => _lines.Sum(l => l.Price * l.Qty);
+
+    public void Add(Line line) =>
+        _lines.Add(line ?? throw new ArgumentNullException(nameof(line)));
+
+    public decimal Gross() => decimal.Round(Net * (1 + TaxRate), 2);
+}
+'''),
+}
+
+# ------------------------------------------------- pygments -> michael map ---
+def token_kind(ttype, value):
+    """Map a pygments token type to a tokens.json code key (or None = variable)."""
+    if ttype in Token.Comment:
+        return 'docComment' if 'Documentation' in str(ttype) else 'comment'
+    if ttype in Token.Literal.String.Doc:
+        return 'docComment'
+    if ttype in Token.Literal.String.Escape or ttype in Token.Literal.String.Escape:
+        return 'stringEscape'
+    if ttype in Token.Literal.String:
+        return 'string'
+    if ttype in Token.Literal.Number:
+        return 'number'
+    if ttype in Token.Keyword.Constant or ttype in Token.Name.Constant or ttype in Token.Name.Builtin.Pseudo:
+        return 'constant'
+    if ttype in Token.Keyword or ttype in Token.Storage:
+        return 'keyword'
+    if ttype in Token.Name.Decorator or ttype in Token.Name.Attribute:
+        return 'decorator'
+    if ttype in Token.Name.Function or ttype in Token.Name.Function.Magic:
+        return 'functionDef'
+    if ttype in Token.Name.Class:
+        return 'type'
+    if ttype in Token.Name.Builtin or ttype in Token.Name.Function.Builtin:
+        return 'functionCall'
+    if ttype in Token.Name.Exception or ttype in Token.Name.Namespace:
+        return 'type'
+    if ttype in Token.Operator:
+        return 'operator'
+    if ttype in Token.Punctuation or ttype in Token.Text or ttype in Token.Whitespace:
+        return 'punctuation'
+    if ttype in Token.Name.Tag:
+        return 'decorator'
+    return None  # plain names -> variable (or unstyled fallback)
+
+def render_variant(vname, v, tokens_map, out_dir):
+    bg = v['bg']['hex']
+    SCALE = 2
+    fs = 14 * SCALE
+    fonts = {}
+    def font(bold, italic):
+        key = (bold, italic)
+        if key not in fonts:
+            fonts[key] = ImageFont_truetype(FONTS[key], fs)
+        return fonts[key]
+    ImageFont_truetype = lambda name, size: __import__('PIL.ImageFont', fromlist=['ImageFont']).truetype(
+        os.path.join(FONT_DIR, name), size)
+
+    gutter_hex = v['faint']['hex']
+
+    for fname, (lang, code) in CORPUS.items():
+        lexer = get_lexer_by_name(lang)
+        lines = code.rstrip('\n').split('\n')
+        # measure
+        probe = font(False, False)
+        ch_w = probe.getbbox('M')[2] - probe.getbbox('M')[0]
+        line_h = int(fs * 1.55)
+        pad = 12 * SCALE
+        w = pad * 2 + ch_w * (max(len(l) for l in lines) + 4)
+        h = pad * 2 + line_h * len(lines)
+        img = Image.new('RGB', (w, h), bg)
+        draw = ImageDraw.Draw(img)
+
+        for lineno, line in enumerate(lines):
+            y = pad + lineno * line_h
+            # line number gutter
+            num = str(lineno + 1)
+            draw.text((pad, y), num.rjust(3), font=font(False, False), fill=gutter_hex)
+            x = pad + ch_w * 4
+            for ttype, value in lex(line, lexer):
+                kind = token_kind(ttype, value)
+                spec = tokens_map['code'].get(kind, {'level': 'fg'})
+                color = v[spec['level']]['hex']
+                f = font(spec.get('weight') == 'bold', spec.get('style') == 'italic')
+                draw.text((x, y), value, font=f, fill=color)
+                x += ch_w * len(value)
+
+        base = os.path.join(out_dir, f"{os.path.splitext(fname)[0]}-{vname}")
+        img.save(base + '.png')
+        # 4-bit e-ink simulation: 16 grays
+        img.quantize(colors=16, dither=Image.Dither.NONE).save(base + '-4bit.png')
+
+if __name__ == '__main__':
+    with open(os.path.join(ROOT, 'ramp.json')) as fh:
+        ramp = json.load(fh)
+    with open(os.path.join(ROOT, 'tokens.json')) as fh:
+        tokens_map = json.load(fh)
+    out_dir = os.path.join(ROOT, 'corpus', 'render')
+    os.makedirs(out_dir, exist_ok=True)
+    for vname, v in ramp['variants'].items():
+        render_variant(vname, v, tokens_map, out_dir)
+        print(f"rendered {vname}: {len(CORPUS)} files x (full + 4bit)")

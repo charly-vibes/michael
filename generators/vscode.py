@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Generate VS Code JSON themes (light/dark) for michael."""
-import json, os
+import json
+import os
+
 
 def load():
     here = os.path.dirname(os.path.abspath(__file__))
-    ramp = json.load(open(os.path.join(here, '..', 'ramp.json')))
-    tokens = json.load(open(os.path.join(here, '..', 'tokens.json')))
+    with open(os.path.join(here, '..', 'ramp.json')) as fh:
+        ramp = json.load(fh)
+    with open(os.path.join(here, '..', 'tokens.json')) as fh:
+        tokens = json.load(fh)
     return ramp, tokens
 
 def to_scope_entry(tok, v):
@@ -87,5 +91,6 @@ if __name__ == '__main__':
     os.makedirs(out, exist_ok=True)
     for name in ('light', 'dark'):
         path = os.path.join(out, f'michael-{name}-color-theme.json')
-        open(path, 'w').write(emit(name, ramp['variants'][name], tokens))
+        with open(path, 'w') as fh:
+            fh.write(emit(name, ramp['variants'][name], tokens))
         print(f"wrote {path}")

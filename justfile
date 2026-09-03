@@ -2,13 +2,18 @@ default: check
 
 # Generate all theme outputs into out/
 build:
-    python3 generators/gnome_terminal.py
-    python3 generators/doom_emacs.py
-    python3 generators/vscode.py
+    uv run generators/gnome_terminal.py
+    uv run generators/doom_emacs.py
+    uv run generators/vscode.py
 
-# Run benchmark gates against ramp.json (contrast, dL, 4-bit survival)
+# Run benchmark gates + render corpus PNGs (full and 4-bit e-ink simulation)
 check: build
-    python3 bench/check.py
+    uv run bench/check.py
+    uv run bench/render.py
+
+# Lint Python sources
+lint:
+    uv run ruff check bench generators
 
 # Install: GNOME Terminal profiles via dconf
 install-gnome: build
@@ -29,4 +34,4 @@ install-vscode: build
     @echo "Select 'michael light' / 'michael dark' via Preferences: Color Theme."
 
 clean:
-    rm -rf out
+    rm -rf out corpus/render

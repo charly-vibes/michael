@@ -9,7 +9,11 @@ Gates:
      bg stays distinct from every text level and from selectionFill
   5. Selection fill must be visible: distinct from bg after quantization
 """
-import json, sys, os
+import json
+import os
+import sys
+from itertools import pairwise
+
 
 def lum(h):
     v = [int(h[i:i+2], 16) / 255 for i in (1, 3, 5)]
@@ -22,11 +26,13 @@ def cr(a, b):
     return (hi + 0.05) / (lo + 0.05)
 
 def quant4(h):  # simulate 4-bit e-ink: 16 evenly spaced grays
-    return '#%02X%02X%02X' % tuple(round(int(h[i:i+2], 16) / 17) * 17 for i in (1, 3, 5))
+    q = (round(int(h[i:i + 2], 16) / 17) * 17 for i in (1, 3, 5))
+    return '#{}{}{}'.format(*q)
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
-    ramp = json.load(open(os.path.join(here, '..', 'ramp.json')))
+    with open(os.path.join(here, '..', 'ramp.json')) as f:
+        ramp = json.load(f)
     failures = []
 
     floors = {'ink': 10, 'strong': 10, 'fg': 7, 'muted': 4.5, 'faint': 3}
@@ -40,16 +46,16 @@ def main():
         # Gate 1: contrast floors
         for k, need in floors.items():
             r = cr(text[k], bg)
-            status = 'OK' if r >= floors[k] else 'FAIL'
-            print(f"[{vname}] {k:6s} {text[k]} vs bg {bg}: {r:5.2f}:1 (need {floors[k]}) {status}")
-            if r < floors[k]:
-                failures.append(f"{vname}: {k} contrast {r:.2f} < {floors[k]}")
+            status = 'OK' if r >= need else 'FAIL'
+            print(f"[{vname}] {k:6s} {text[k]} vs bg {bg}: {r:5.2f}:1 (need {need}) {status}")
+            if r < need:
+                failures.append(f"{vname}: {k} contrast {r:.2f} < {need}")
 
         # Gate 2: dL between adjacent text levels
         Ls = sorted(v[k]['L'] for k in levels)
-        gaps = [b - a for a, b in zip(Ls, Ls[1:])]
+        gaps = [b - a for a, b in pairwise(Ls)]
         status = 'OK' if min(gaps) >= 0.10 - 1e-9 else 'FAIL'
-        print(f"[{vname}] dL gaps: {['%.3f' % g for g in gaps]} {status}")
+        print(f"[{vname}] dL gaps: {[f'{g:.3f}' for g in gaps]} {status}")
         if min(gaps) < 0.10 - 1e-9:
             failures.append(f"{vname}: dL gap {min(gaps):.3f} < 0.10")
 

@@ -4,12 +4,16 @@
 Level -> face translation per tokens.json grammar:
   level x weight x style. Underline reserved for diagnostics.
 """
-import json, os
+import json
+import os
+
 
 def load():
     here = os.path.dirname(os.path.abspath(__file__))
-    ramp = json.load(open(os.path.join(here, '..', 'ramp.json')))
-    tokens = json.load(open(os.path.join(here, '..', 'tokens.json')))
+    with open(os.path.join(here, '..', 'ramp.json')) as fh:
+        ramp = json.load(fh)
+    with open(os.path.join(here, '..', 'tokens.json')) as fh:
+        tokens = json.load(fh)
     return ramp, tokens
 
 FACE_REMAP = {
@@ -79,7 +83,7 @@ def emit(variant, v, tokens):
     # font-lock from tokens.json
     for face, key in FACE_REMAP.items():
         A(f" '({face} {props(tokens['code'][key], v)})")
-    A(" '(font-lock-comment-delimiter-face ((t (:slant normal :foreground \"%s\"))))" % faint)
+    A(f' (font-lock-comment-delimiter-face ((t (:slant normal :foreground "{faint}"))))')
     A(')')
     A(f'(provide-theme \'doom-michael-{variant})')
     return "\n".join(L) + "\n"
@@ -90,5 +94,6 @@ if __name__ == '__main__':
     os.makedirs(out, exist_ok=True)
     for name in ('light', 'dark'):
         path = os.path.join(out, f'doom-michael-{name}.el')
-        open(path, 'w').write(emit(name, ramp['variants'][name], tokens))
+        with open(path, 'w') as fh:
+            fh.write(emit(name, ramp['variants'][name], tokens))
         print(f"wrote {path}")
