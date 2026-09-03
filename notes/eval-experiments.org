@@ -1,0 +1,34 @@
+#+TITLE: michael — eval experiment log
+#+DATE: 2026-09-03
+
+* Judge noise (measured)
+- Identical pixels, 6 grades: separation spread 1-3 (n=6, one failed).
+- Class scores swing 0-3 per class across identical renders.
+- Verdict: single-pass eval (n=6 images) cannot resolve deltas < ~0.5 class points.
+- Mitigation: =--repeats 3= (median-run verdict) for any accept/reject decision.
+
+* v2 ramp (2026-09-03) — COMMITTED
+- Dark: strong 0.80→0.82, fg 0.70→0.69 (mid gap 0.10 → 0.13).
+- Light: fg 0.42→0.43.
+- Rationale: eval showed types/function_names BROKEN at 4-bit; strong-fg mud.
+- 4-bit effect: dark strong quantizes #BBB→#CCC, now 3 quantum steps from fg #999.
+- Light re-grade improved broadly (keywords 2.6→3.0, types 0.7→1.0, punc 0.8→1.0).
+- Dark re-grade: within judge noise; kept (mechanically justified, gates pass).
+
+* Ramp is provably near-locked
+- WCAG floors pin dark fg (≥7:1 → L 0.69), muted (≥4.5 → L 0.58), faint (≥3 → L 0.48).
+- Light: muted/faint gap is exactly 0.100 (L 0.545/0.645) — maximal.
+- Only the ink-strong-fg midsection has slack (~0.30 total for 2 gaps).
+- 6th text level impossible at dL≥0.10 + floors. Weight/style carry the rest.
+
+* Experiment: numbers/constants → strong+bold — REVERTED
+- Hypothesis: escape fg+bold collision with variables (highest-frequency class).
+- Result: dark keywords 2.3→1.8, types 1.2→0.7, func 0.8→0.7, numbers flat.
+- Strong level too crowded (func-def, func-call, decorator, now numbers).
+- Lesson: crowding strong hurts more than the variable collision. Reverted.
+
+* Structural conclusion
+- 8 code classes / 5 levels ⇒ at least 3 weight-or-style-only distinctions. Unavoidable.
+- Judge under-credits weight vs lightness; baselines win on accidental lightness spread.
+- Residual levers: render size (weight more visible at e-ink font sizes), judge ensembles,
+  or accepting judge preference for hue-like diversity we cannot (and should not) chase.
