@@ -53,14 +53,25 @@ just install-doom  # copy themes to ~/.doom.d/themes/
 just install-vscode
 ```
 
-## Corpus rendering
+## Corpus rendering + vision eval
 
 `bench/render.py` renders the six-language corpus (Python, Julia, Rust,
-TypeScript, Clojure, C#) through the actual token grammar using Pygments +
-JetBrains Mono, in both variants, into `corpus/render/`:
+TypeScript, Clojure, C#) through the token grammar using Pygments +
+JetBrains Mono — for michael AND for Solarized/Flexoki baselines.
+Baselines go through a luminance-preserving grayscale conversion: exactly
+what a grayscale-forced display does to a color theme (WCAG ratios kept,
+hue destroyed). Each render gets a full PNG + a 4-bit quantized version
+(e-ink floor test).
 
-- `<lang>-light.png` / `<lang>-dark.png` — full-fidelity render
-- `<lang>-*-4bit.png` — quantized to 16 grays (e-ink simulation)
+`bench/eval.py` has a vision model (headless `pi` + OpenRouter, default
+`google/gemini-2.5-flash-lite`) grade every image blind on a rubric
+(token-class separation, readability, collisions) and ranks the themes:
 
-Inspect the 4-bit PNGs to confirm every token state survives the panel;
-the final check is still a real e-ink/grayscale screen.
+```sh
+just eval                       # render + grade everything (~72 images)
+uv run bench/eval.py --filter michael   # subset
+uv run bench/eval.py --model google/gemma-4-31b-it:free  # free model
+```
+
+Results land in `corpus/eval-results.json`. The final check is still a
+real e-ink/grayscale screen — the judge is a proxy.

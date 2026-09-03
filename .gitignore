@@ -1,2 +1,4 @@
 out/
 .venv/
+corpus/render/
+corpus/eval-results.json

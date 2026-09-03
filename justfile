@@ -11,6 +11,11 @@ check: build
     uv run bench/check.py
     uv run bench/render.py
 
+# Vision eval: pi grades rendered themes (needs OPENROUTER credit)
+eval: build
+    uv run bench/render.py
+    uv run bench/eval.py --jobs 2
+
 # Lint Python sources
 lint:
     uv run ruff check bench generators

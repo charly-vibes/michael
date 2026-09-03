@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Render michael's semantic grammar onto real code, as PNGs.
+"""Render michael AND baseline themes (Solarized, Flexoki) onto real code, as PNGs.
 
-Pipeline: source file -> pygments lex -> tokens mapped through tokens.json
--> drawn with JetBrains Mono (weight/style = real font files) -> PNG.
-Also emits 4-bit (16-gray) quantized versions to simulate e-ink rendering.
+Pipeline: source -> pygments lex -> token map -> drawn with JetBrains Mono
+(real bold/italic faces) -> PNG. All themes share corpus, font, weight and
+style grammar; the only variable is lightness design.
 
-Usage: python3 bench/render.py   (writes to corpus/render/)
+Variants per theme: full-fidelity PNG + 4-bit (16-gray) quantization (e-ink
+floor test). Baselines additionally emit a LUMINANCE-PRESERVING GRAYSCALE
+conversion - what a grayscale-forced display does to a color theme: relative
+luminance (and therefore WCAG contrast) is kept, hue is destroyed.
+
+Usage: uv run bench/render.py   (writes to corpus/render/)
 """
 import json
 import os
 
-from PIL import Image, ImageDraw
+from baselines import build_baselines
+from PIL import Image, ImageDraw, ImageFont
 from pygments import lex
 from pygments.lexers import get_lexer_by_name
 from pygments.token import Token
@@ -179,11 +185,13 @@ public sealed class Cart
 # ------------------------------------------------- pygments -> michael map ---
 def token_kind(ttype, value):
     """Map a pygments token type to a tokens.json code key (or None = variable)."""
-    if ttype in Token.Comment:
-        return 'docComment' if 'Documentation' in str(ttype) else 'comment'
     if ttype in Token.Literal.String.Doc:
         return 'docComment'
-    if ttype in Token.Literal.String.Escape or ttype in Token.Literal.String.Escape:
+    if ttype in Token.Comment:
+        return 'docComment' if 'Documentation' in str(ttype) else 'comment'
+    if ttype in Token.Literal.String.Escape:
+        return 'stringEscape'
+    if ttype in Token.Literal.String.Interpol:
         return 'stringEscape'
     if ttype in Token.Literal.String:
         return 'string'
@@ -209,54 +217,91 @@ def token_kind(ttype, value):
         return 'punctuation'
     if ttype in Token.Name.Tag:
         return 'decorator'
-    return None  # plain names -> variable (or unstyled fallback)
+    return None  # plain names -> variable (unstyled fallback)
 
-def render_variant(vname, v, tokens_map, out_dir):
-    bg = v['bg']['hex']
-    SCALE = 2
-    fs = 14 * SCALE
+
+# ------------------------------------------------------- theme construction ---
+def _rel_lum(h):
+    v = [int(h[i:i+2], 16) / 255 for i in (1, 3, 5)]
+    v = [u / 12.92 if u <= 0.04045 else ((u + 0.055) / 1.055) ** 2.4 for u in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def gray_keep_lum(h):
+    """Grayscale a hex color preserving relative luminance (hence WCAG ratio).
+
+    This is what a grayscale-forced display does: destroys hue, keeps lightness.
+    """
+    L = _rel_lum(h)
+    u = 12.92 * L if L <= 0.0031308 else 1.055 * L ** (1 / 2.4) - 0.055
+    g = round(max(0, min(1, u)) * 255)
+    return f'#{g:02X}{g:02X}{g:02X}'
+
+
+def michael_styles(vname, ramp, tokens_map):
+    """michael variant -> theme dict (authored gray, no conversion)."""
+    v = ramp['variants'][vname]
+    tokens = {}
+    for kind, spec in tokens_map['code'].items():
+        tokens[kind] = (
+            v[spec['level']]['hex'],
+            spec.get('weight') == 'bold',
+            spec.get('style') == 'italic',
+        )
+    return {'name': f'michael-{vname}', 'bg': v['bg']['hex'],
+            'gutter': v['faint']['hex'], 'default': v['fg']['hex'],
+            'tokens': tokens, 'grayscale': False}
+
+
+def render_theme(theme, corpus, out_dir, scale=2):
+    """Render one theme dict over the corpus. Returns list of output paths."""
     fonts = {}
+
     def font(bold, italic):
         key = (bold, italic)
         if key not in fonts:
-            fonts[key] = ImageFont_truetype(FONTS[key], fs)
+            fonts[key] = ImageFont.truetype(os.path.join(FONT_DIR, FONTS[key]), 14 * scale)
         return fonts[key]
-    ImageFont_truetype = lambda name, size: __import__('PIL.ImageFont', fromlist=['ImageFont']).truetype(
-        os.path.join(FONT_DIR, name), size)
 
-    gutter_hex = v['faint']['hex']
+    def fg(kind):
+        if kind is not None and kind in theme['tokens']:
+            c, bold, italic = theme['tokens'][kind]
+        else:
+            c, bold, italic = theme['default'], False, False
+        return (gray_keep_lum(c) if theme['grayscale'] else c, bold, italic)
 
-    for fname, (lang, code) in CORPUS.items():
+    def conv(c):
+        return gray_keep_lum(c) if theme['grayscale'] else c
+
+    paths = []
+    for fname, (lang, code) in corpus.items():
         lexer = get_lexer_by_name(lang)
         lines = code.rstrip('\n').split('\n')
-        # measure
         probe = font(False, False)
         ch_w = probe.getbbox('M')[2] - probe.getbbox('M')[0]
-        line_h = int(fs * 1.55)
-        pad = 12 * SCALE
+        line_h = int(14 * scale * 1.55)
+        pad = 12 * scale
         w = pad * 2 + ch_w * (max(len(l) for l in lines) + 4)
         h = pad * 2 + line_h * len(lines)
-        img = Image.new('RGB', (w, h), bg)
+        img = Image.new('RGB', (w, h), conv(theme['bg']))
         draw = ImageDraw.Draw(img)
 
         for lineno, line in enumerate(lines):
             y = pad + lineno * line_h
-            # line number gutter
-            num = str(lineno + 1)
-            draw.text((pad, y), num.rjust(3), font=font(False, False), fill=gutter_hex)
+            draw.text((pad, y), str(lineno + 1).rjust(3), font=font(False, False),
+                      fill=conv(theme['gutter']))
             x = pad + ch_w * 4
             for ttype, value in lex(line, lexer):
-                kind = token_kind(ttype, value)
-                spec = tokens_map['code'].get(kind, {'level': 'fg'})
-                color = v[spec['level']]['hex']
-                f = font(spec.get('weight') == 'bold', spec.get('style') == 'italic')
-                draw.text((x, y), value, font=f, fill=color)
+                color, bold, italic = fg(token_kind(ttype, value))
+                draw.text((x, y), value, font=font(bold, italic), fill=color)
                 x += ch_w * len(value)
 
-        base = os.path.join(out_dir, f"{os.path.splitext(fname)[0]}-{vname}")
+        base = os.path.join(out_dir, f"{os.path.splitext(fname)[0]}-{theme['name']}")
         img.save(base + '.png')
-        # 4-bit e-ink simulation: 16 grays
         img.quantize(colors=16, dither=Image.Dither.NONE).save(base + '-4bit.png')
+        paths.extend([base + '.png', base + '-4bit.png'])
+    return paths
+
 
 if __name__ == '__main__':
     with open(os.path.join(ROOT, 'ramp.json')) as fh:
@@ -265,6 +310,17 @@ if __name__ == '__main__':
         tokens_map = json.load(fh)
     out_dir = os.path.join(ROOT, 'corpus', 'render')
     os.makedirs(out_dir, exist_ok=True)
-    for vname, v in ramp['variants'].items():
-        render_variant(vname, v, tokens_map, out_dir)
-        print(f"rendered {vname}: {len(CORPUS)} files x (full + 4bit)")
+    # clean stale renders from older naming schemes
+    for stale in os.listdir(out_dir):
+        os.remove(os.path.join(out_dir, stale))
+
+    total = 0
+    for vname in ramp['variants']:
+        paths = render_theme(michael_styles(vname, ramp, tokens_map), CORPUS, out_dir)
+        total += len(paths)
+        print(f"rendered michael-{vname}: {len(CORPUS)} files x (full + 4bit)")
+    for name, theme in build_baselines().items():
+        paths = render_theme(theme, CORPUS, out_dir)
+        total += len(paths)
+        print(f"rendered {name}: {len(CORPUS)} files x (full + 4bit, luminance-preserving gray)")
+    print(f"total images: {total}")
