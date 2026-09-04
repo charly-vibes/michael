@@ -42,6 +42,13 @@
   figure { margin: 1.5rem 0; }
   figure img { width: 100%; border-radius: 6px; border: 1px solid var(--sel); display: block; }
   figcaption { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+  .pill {
+    border: 1px solid var(--sel); background: var(--bg-alt); color: var(--muted);
+    padding: .18rem .6rem; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: .82rem; transition: all .15s;
+  }
+  .pill:hover { color: var(--strong); border-color: var(--muted); }
+  .pill.on { color: var(--ink); border-color: var(--ink); background: var(--sel); }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
   @media (max-width: 720px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
@@ -170,24 +177,42 @@ diagnostics and the experiment log live in the repository
 <p>
 Solarized's keyword blue and type yellow, its function cyan and constant
 orange — on a grayscale-forced screen those hues are destroyed, and every
-token lands on whatever gray its lightness happens to be. The color story
-below-left becomes the gray story below-middle. michael (right) never had a
-color story to lose: its hierarchy is the gray story, by construction.
+token lands on whatever gray its lightness happens to be. Flip the toggle on
+the Solarized panel to watch it happen. michael (right) never had a color
+story to lose: its hierarchy is the gray story, by construction.
 </p>
 <div class="grid3">
   <figure style="margin:0">
-    <img src="assets/compare-solarized-dark-color.png" alt="Solarized dark, original colorset">
-    <figcaption>Solarized dark — <strong>original colorset</strong> (7 hues carrying the semantics)</figcaption>
+    <div style="display:flex;gap:.4rem;margin-bottom:.5rem">
+      <button class="pill on" id="solColor" onclick="solarMode('color')">colorset</button>
+      <button class="pill" id="solGray" onclick="solarMode('gray')">forced gray</button>
+    </div>
+    <img id="solarImg" src="assets/compare-solarized-dark-color.png" alt="Solarized dark">
+    <figcaption id="solarCap">Solarized dark — <strong>original colorset</strong> (7 hues carrying the semantics)</figcaption>
   </figure>
   <figure style="margin:0">
-    <img src="assets/compare-solarized-dark-4bit.png" alt="Solarized dark, forced to 16 grays">
-    <figcaption>same theme, forced to gray — keyword blue and type yellow collapse toward each other</figcaption>
-  </figure>
-  <figure style="margin:0">
+    <div style="margin-bottom:.5rem;color:var(--faint);font-size:.85rem">&nbsp;</div>
     <img src="assets/compare-michael-dark-4bit.png" alt="michael dark at 16 grays">
     <figcaption>michael dark — <strong>authored gray</strong>: five levels plus weight/style, gate-checked</figcaption>
   </figure>
 </div>
+<script>
+function solarMode(mode) {
+  const img = document.getElementById('solarImg');
+  const cap = document.getElementById('solarCap');
+  const cBtn = document.getElementById('solColor');
+  const gBtn = document.getElementById('solGray');
+  if (mode === 'color') {
+    img.src = 'assets/compare-solarized-dark-color.png';
+    cap.innerHTML = 'Solarized dark — <strong>original colorset</strong> (7 hues carrying the semantics)';
+    cBtn.classList.add('on'); gBtn.classList.remove('on');
+  } else {
+    img.src = 'assets/compare-solarized-dark-4bit.png';
+    cap.innerHTML = 'same theme, <strong>forced to gray</strong> — keyword blue and type yellow collapse toward each other';
+    gBtn.classList.add('on'); cBtn.classList.remove('on');
+  }
+}
+</script>
 
 <h2>Install</h2>
 <pre><code>git clone https://github.com/charly-vibes/michael.git
