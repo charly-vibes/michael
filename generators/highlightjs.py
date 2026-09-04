@@ -48,10 +48,11 @@ def css_for(variant, v, scope=''):
         joined = ', '.join(selectors)
         rules.append(f'{joined} {{ {"; ".join(props)}; }}')
 
-    # base block: background + default fg
+    # base block: bg + default fg; display:block so the background fills the
+    # panel even when .hljs sits on an inline <code> element inside <pre>
     base_sels = [f'{scope} .hljs'] if scope else ['.hljs']
     rules.append(
-        f"{', '.join(base_sels)} {{ background: {g('bg')}; color: {g('fg')}; }}"
+        f"{', '.join(base_sels)} {{ background: {g('bg')}; color: {g('fg')}; display: block; overflow-x: auto; }}"
     )
     for kind, sel in HLJS_MAP.values():
         tok = tok_by_key(kind)

@@ -1,5 +1,5 @@
 /* michael — highlight.js theme. Generated; grammar in tokens.json. */
-[data-michael="light"] .hljs { background: #F5F5F5; color: #505050; }
+[data-michael="light"] .hljs { background: #F5F5F5; color: #505050; display: block; overflow-x: auto; }
 [data-michael="light"] .hljs-keyword, [data-michael="light"] .hljs-selector-tag, [data-michael="light"] .hljs-doctag { color: #070707; font-weight: 700; }
 [data-michael="light"] .hljs-type, [data-michael="light"] .hljs-title.class_, [data-michael="light"] .hljs-name, [data-michael="light"] .hljs-tag { color: #070707; }
 [data-michael="light"] .hljs-title, [data-michael="light"] .hljs-title.function_ { color: #2E2E2E; font-weight: 700; }
@@ -17,7 +17,7 @@
 [data-michael="light"] .hljs-strong { font-weight: 700; color: #070707; }
 
 
-[data-michael="dark"] .hljs { background: #070707; color: #9B9B9B; }
+[data-michael="dark"] .hljs { background: #070707; color: #9B9B9B; display: block; overflow-x: auto; }
 [data-michael="dark"] .hljs-keyword, [data-michael="dark"] .hljs-selector-tag, [data-michael="dark"] .hljs-doctag { color: #F5F5F5; font-weight: 700; }
 [data-michael="dark"] .hljs-type, [data-michael="dark"] .hljs-title.class_, [data-michael="dark"] .hljs-name, [data-michael="dark"] .hljs-tag { color: #F5F5F5; }
 [data-michael="dark"] .hljs-title, [data-michael="dark"] .hljs-title.function_ { color: #C4C4C4; font-weight: 700; }
