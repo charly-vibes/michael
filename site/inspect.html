@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" data-michael="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>michael — GitHub code inspector</title>
+<meta name="description" content="View any public GitHub file rendered live in the michael grayscale theme. Paste a blob URL — the inspector fetches it and highlights it with the generated highlight.js theme.">
+<style>
+  html[data-michael="dark"] {
+    --bg: #070707; --bg-alt: #161616; --fg: #9E9E9E; --strong: #BEBEBE;
+    --ink: #F5F5F5; --muted: #7A7A7A; --faint: #5D5D5D; --sel: #2E2E2E;
+  }
+  html[data-michael="light"] {
+    --bg: #F5F5F5; --bg-alt: #EBEBEB; --fg: #505050; --strong: #2E2E2E;
+    --ink: #070707; --muted: #707070; --faint: #8D8D8D; --sel: #D7D7D7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); margin: 0;
+    font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+    line-height: 1.65; font-size: 16px;
+  }
+  main { max-width: 56rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  h1, h2 { color: var(--ink); font-weight: 700; line-height: 1.25; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  a { color: var(--strong); }
+  strong, b { color: var(--ink); }
+  em, .muted { color: var(--muted); font-style: normal; }
+  .faint { color: var(--faint); }
+  .tagline { color: var(--muted); margin-top: 0; }
+  code { color: var(--ink); background: var(--bg-alt); padding: .1em .35em; border-radius: 3px; font-size: .9em; }
+  .pill {
+    border: 1px solid var(--sel); background: var(--bg-alt); color: var(--muted);
+    padding: .28rem .75rem; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: .85rem; transition: all .15s;
+  }
+  .pill:hover { color: var(--strong); border-color: var(--muted); }
+  .pill.on { color: var(--ink); border-color: var(--ink); background: var(--sel); }
+  #fetchRow { display: flex; gap: .5rem; margin: 1.2rem 0 .4rem; }
+  #urlInput {
+    flex: 1; min-width: 0; background: var(--bg-alt); color: var(--ink);
+    border: 1px solid var(--sel); border-radius: 6px; padding: .55rem .8rem;
+    font: inherit; font-size: .9rem;
+  }
+  #urlInput:focus { outline: none; border-color: var(--muted); }
+  #urlInput::placeholder { color: var(--faint); }
+  #goBtn {
+    border: 1px solid var(--ink); background: var(--sel); color: var(--ink);
+    border-radius: 6px; padding: .55rem 1.1rem; cursor: pointer; font: inherit; font-size: .9rem;
+  }
+  #goBtn:active { transform: translateY(1px); }
+  .examples { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 0; }
+  #status { min-height: 1.5rem; margin: .6rem 0; font-size: .88rem; color: var(--muted); }
+  #status.error { color: var(--ink); background: var(--sel); padding: .45rem .7rem; border-radius: 6px; }
+  #meta { color: var(--muted); font-size: .82rem; margin: .6rem 0 .3rem; word-break: break-all; }
+  #meta strong { color: var(--strong); }
+  #codeWrap {
+    background: transparent; border: 1px solid var(--sel); border-radius: 6px;
+    overflow: hidden;
+  }
+  #codeBox { padding: 0; margin: 0; }
+  #codeBox pre { margin: 0; padding: 1rem .9rem; overflow-x: auto; background: transparent; }
+  #codeBox pre code.hljs { padding: 0; background: transparent; font-size: .85rem; line-height: 1.55; }
+  footer { color: var(--faint); margin-top: 4rem; border-top: 1px solid var(--sel); padding-top: 1rem; font-size: .85rem; }
+  @media (max-width: 720px) {
+    main { padding: 1.2rem .9rem 3rem; }
+    #fetchRow { flex-wrap: wrap; }
+    #urlInput { flex: 1 1 100%; }
+    #goBtn { flex: 1 1 100%; }
+  }
+</style>
+<link rel="stylesheet" href="assets/michael-hljs.css">
+</head>
+<body>
+<main>
+
+<h1>michael inspector</h1>
+<p class="tagline">render any public GitHub file in the grayscale theme — live</p>
+
+<p>
+Paste a <code>github.com</code> blob URL (or <code>owner/repo:path</code>).
+The file is fetched, highlighted with the generated
+<a href="index.html#live-code"><strong>michael highlight.js theme</strong></a>,
+and shown exactly as a grayscale-forced display renders it. Flip the toggle
+to compare polarities.
+</p>
+
+<div id="fetchRow">
+  <input id="urlInput" type="url" spellcheck="false" autocomplete="off"
+         placeholder="https://github.com/owner/repo/blob/main/src/file.py">
+  <button id="goBtn" onclick="inspectFromInput()">view</button>
+</div>
+<div class="examples" id="examples"></div>
+<div id="status" aria-live="polite"></div>
+
+<div style="margin:.4rem 0">
+  <button class="pill on" id="varDark" onclick="setVariant('dark')">dark</button>
+  <button class="pill" id="varLight" onclick="setVariant('light')">light</button>
+</div>
+
+<div id="meta"></div>
+<div id="codeWrap" style="display:none">
+  <div id="codeBox">
+    <pre><code class="hljs" id="codeTarget"></code></pre>
+  </div>
+</div>
+
+<footer>
+michael — authored gray. gates pass or it doesn't ship. ·
+<a href="index.html">home</a> · <a href="gallery.html">gallery</a>
+</footer>
+
+</main>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+<script>
+'use strict';
+
+const API_BASE = 'https://api.github.com';
+const RAW_BASE = 'https://raw.githubusercontent.com';
+
+// atril-pattern: typed error with status, rate-limit aware
+class GitHubApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'GitHubApiError';
+    this.status = status;
+  }
+}
+function throwForStatus(status, rateLimitRemaining) {
+  if (status === 403 && rateLimitRemaining === '0') {
+    throw new GitHubApiError(
+      'GitHub API rate limit exceeded (60 requests/hour unauthenticated). Try again later.',
+      status);
+  }
+  if (status === 404) {
+    throw new GitHubApiError('File not found — check the URL, or the repo may be private.', status);
+  }
+  throw new GitHubApiError(`GitHub fetch failed (HTTP ${status})`, status);
+}
+
+// atril-pattern: in-memory cache map
+const fileCache = new Map();
+
+// Per-segment encoding: encodeURI would leave ? and # intact in odd filenames.
+const encPath = (path) => path.split('/').map(encodeURIComponent).join('/');
+
+async function fetchViaApi(owner, repo, ref, path) {
+  const url = `${API_BASE}/repos/${owner}/${repo}/contents/${encPath(path)}?ref=${encodeURIComponent(ref)}`;
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/vnd.github.raw+json' },
+    cache: 'no-cache',
+  });
+  if (!res.ok) {
+    throwForStatus(res.status, res.headers.get('X-RateLimit-Remaining'));
+  }
+  return res.text();
+}
+
+async function fetchFile(owner, repo, ref, path) {
+  const key = `${owner}/${repo}@${ref}:${path}`;
+  if (fileCache.has(key)) return { text: fileCache.get(key), cached: true };
+
+  // Raw first — no rate limit for public repos, but no rate-limit headers on failure.
+  let text = null;
+  try {
+    const res = await fetch(`${RAW_BASE}/${owner}/${repo}/${encodeURIComponent(ref)}/${encPath(path)}`,
+                            { cache: 'no-cache' });
+    if (res.ok) text = await res.text();
+  } catch { /* fall through to API */ }
+
+  if (text === null) text = await fetchViaApi(owner, repo, ref, path); // surfaces 403/404 properly
+
+  fileCache.set(key, text);
+  return { text, cached: false };
+}
+
+async function getDefaultBranch(owner, repo) {
+  const key = `repo:${owner}/${repo}`;
+  if (fileCache.has(key)) return fileCache.get(key);
+  const res = await fetch(`${API_BASE}/repos/${owner}/${repo}`);
+  if (!res.ok) throwForStatus(res.status, res.headers.get('X-RateLimit-Remaining'));
+  const data = await res.json();
+  const branch = data.default_branch;
+  fileCache.set(key, branch);
+  return branch;
+}
+
+// Parse a pasted target into {owner, repo, ref?, path?}, or null.
+// Accepts:
+//   https://github.com/o/r/blob/REF/path     (also /raw/, ?plain=1, #L12 stripped)
+//   https://raw.githubusercontent.com/o/r/REF/path
+//   o/r/REF/path  ·  o/r:path  ·  o/r@REF:path
+function parseTarget(input) {
+  const s = input.trim().replace(/\?.*$/, '').replace(/#.*$/, '').replace(/\/+$/, '');
+  let m = s.match(/^https?:\/\/(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/(blob|raw)\/([^/\s]+)\/(.+)$/);
+  if (m) return { owner: m[1], repo: m[2], ref: decodeURIComponent(m[4]), path: decodeURIComponent(m[5]) };
+  m = s.match(/^https?:\/\/raw\.githubusercontent\.com\/([^/\s]+)\/([^/\s]+)\/([^/\s]+)\/(.+)$/);
+  if (m) return { owner: m[1], repo: m[2], ref: decodeURIComponent(m[3]), path: decodeURIComponent(m[4]) };
+  m = s.match(/^([\w.-]+)\/([\w.-]+?)(?:\.git)?\/(.+)$/);
+  if (m && m[1] !== 'github.com') return { owner: m[1], repo: m[2], path: m[3] };
+  m = s.match(/^([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:@([^:\s]+))?[/:](.+)$/);
+  if (m) return m[3]
+    ? { owner: m[1], repo: m[2], ref: m[3], path: m[4] }
+    : { owner: m[1], repo: m[2], path: m[4] };
+  return null;
+}
+
+// Branch names may contain slashes ("feat/x") — blob URLs are ambiguous.
+// Try shortest ref first, then grow the ref and shrink the path.
+async function fetchWithRefVariants(target) {
+  if (target.ref) {
+    const r = await fetchFile(target.owner, target.repo, target.ref, target.path);
+    return { ...r, ref: target.ref, path: target.path };
+  }
+  const segs = target.path.split('/');
+  if (segs.length < 2) {
+    const ref = await getDefaultBranch(target.owner, target.repo);
+    const r = await fetchFile(target.owner, target.repo, ref, target.path);
+    return { ...r, ref, path: target.path };
+  }
+  const maxRefSegs = Math.min(segs.length - 1, 4);
+  let lastErr = null;
+  for (let i = 1; i <= maxRefSegs; i++) {
+    const ref = segs.slice(0, i).join('/');
+    const path = segs.slice(i).join('/');
+    try {
+      const r = await fetchFile(target.owner, target.repo, ref, path);
+      return { ...r, ref, path };
+    } catch (e) {
+      lastErr = e;
+      if (e.status === 403) throw e; // rate limit — stop hammering
+    }
+  }
+  throw lastErr || new GitHubApiError('Could not resolve ref/path.', 404);
+}
+
+const EXT_LANG = {
+  js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
+  ts: 'typescript', tsx: 'typescript', py: 'python', rb: 'ruby', rs: 'rust',
+  go: 'go', c: 'c', h: 'c', cpp: 'cpp', cc: 'cpp', cxx: 'cpp', hpp: 'cpp',
+  cs: 'csharp', java: 'java', jl: 'julia', clj: 'clojure', cljs: 'clojure',
+  edn: 'clojure', sh: 'bash', bash: 'bash', zsh: 'bash', fish: 'bash',
+  html: 'xml', xml: 'xml', svg: 'xml', css: 'css', scss: 'scss', less: 'less',
+  json: 'json', yml: 'yaml', yaml: 'yaml', md: 'markdown', markdown: 'markdown',
+  toml: 'ini', ini: 'ini', cfg: 'ini', conf: 'ini', lua: 'lua', php: 'php',
+  swift: 'swift', kt: 'kotlin', kts: 'kotlin', sql: 'sql', hs: 'haskell',
+  ex: 'elixir', exs: 'elixir', erl: 'erlang', vim: 'vim', r: 'r', R: 'r',
+  pl: 'perl', dart: 'dart', zig: 'zig', diff: 'diff', patch: 'diff',
+  makefile: 'makefile', dockerfile: 'dockerfile', dconf: 'ini',
+};
+
+function langForPath(path) {
+  const base = path.split('/').pop().toLowerCase();
+  if (base === 'makefile') return 'makefile';
+  if (base === 'dockerfile') return 'dockerfile';
+  const ext = base.includes('.') ? base.split('.').pop() : '';
+  return EXT_LANG[ext] || '';
+}
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = isError ? 'error' : '';
+}
+
+function setVariant(v) {
+  document.documentElement.dataset.michael = v;
+  document.getElementById('varDark').classList.toggle('on', v === 'dark');
+  document.getElementById('varLight').classList.toggle('on', v === 'light');
+  try { localStorage.setItem('michael-variant', v); } catch { /* private mode */ }
+}
+
+async function inspect(target) {
+  const code = document.getElementById('codeTarget');
+  const wrap = document.getElementById('codeWrap');
+  const meta = document.getElementById('meta');
+  setStatus('fetching…');
+  wrap.style.display = 'none';
+  meta.textContent = '';
+  try {
+    const { text, cached, ref, path } = await fetchWithRefVariants(target);
+    const lang = langForPath(path);
+    const truncated = text.length > 200_000;
+    const shown = truncated ? text.slice(0, 200_000) + '\n… (truncated)' : text;
+    code.className = 'hljs' + (lang ? ' language-' + lang : '');
+    code.removeAttribute('data-highlighted');
+    code.textContent = shown;
+    hljs.highlightElement(code);
+    const esc = (s) => s.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    meta.innerHTML =
+      `<strong>${esc(target.owner)}/${esc(target.repo)}</strong> @ <strong>${esc(ref)}</strong> — ${esc(path)}` +
+      ` · ${text.split('\n').length.toLocaleString()} lines` +
+      (lang ? ` · <strong>${lang}</strong>` : ' · auto-detected') +
+      (cached ? ' · <em>cached</em>' : '') +
+      (truncated ? ' · <strong>truncated at 200k chars</strong>' : '');
+    setStatus('');
+    wrap.style.display = '';
+    history.replaceState(null, '', '#inspect=' + encodeURIComponent(
+      `${target.owner}/${target.repo}/${ref}/${path}`));
+  } catch (e) {
+    setStatus(e.message, true);
+  }
+}
+
+function inspectFromInput() {
+  const input = document.getElementById('urlInput').value;
+  const target = parseTarget(input);
+  if (!target) {
+    setStatus('Could not parse that. Paste a github.com blob URL or owner/repo:path.', true);
+    return;
+  }
+  inspect(target);
+}
+
+(function init() {
+  try {
+    const saved = localStorage.getItem('michael-variant');
+    if (saved === 'light' || saved === 'dark') setVariant(saved);
+  } catch { /* private mode */ }
+
+  const hash = location.hash.match(/^#inspect=(.+)$/);
+  if (hash) {
+    const parsed = parseTarget(decodeURIComponent(hash[1]));
+    if (parsed) {
+      document.getElementById('urlInput').value = decodeURIComponent(hash[1]);
+      inspect(parsed);
+    }
+  }
+
+  const EXAMPLES = [
+    'https://github.com/charly-vibes/michael/blob/main/tokens.json',
+    'https://github.com/charly-vibes/michael/blob/main/bench/check.py',
+    'https://github.com/charly-vibes/michael/blob/main/generators/highlightjs.py',
+  ];
+  const exRow = document.getElementById('examples');
+  for (const url of EXAMPLES) {
+    const b = document.createElement('button');
+    b.className = 'pill';
+    b.textContent = url.split('/').pop();
+    b.onclick = () => { document.getElementById('urlInput').value = url; inspect(parseTarget(url)); };
+    exRow.appendChild(b);
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') inspectFromInput();
+  });
+})();
+</script>
+</body>
+</html>
