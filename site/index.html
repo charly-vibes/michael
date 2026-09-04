@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>michael — a grayscale theme for grayscale-forced displays</title>
+<meta name="description" content="Authored-gray terminal/editor theme. Meaning carried by lightness, weight, style — never hue. Gate-checked, vision-evaluated against Solarized and Flexoki.">
+<style>
+  :root {
+    --bg: #070707; --bg-alt: #161616; --fg: #9E9E9E; --strong: #BEBEBE;
+    --ink: #F5F5F5; --muted: #7A7A7A; --faint: #5D5D5D; --sel: #2E2E2E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); margin: 0;
+    font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+    line-height: 1.65; font-size: 16px;
+  }
+  main { max-width: 56rem; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  h1, h2, h3 { color: var(--ink); font-weight: 700; line-height: 1.25; }
+  h1 { font-size: 2rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; margin-top: 3rem; border-bottom: 1px solid var(--sel); padding-bottom: .4rem; }
+  h3 { font-size: 1.05rem; margin-top: 2rem; }
+  a { color: var(--strong); }
+  strong, b { color: var(--ink); }
+  em, .muted { color: var(--muted); font-style: normal; }
+  .faint { color: var(--faint); }
+  code { color: var(--ink); background: var(--bg-alt); padding: .1em .35em; border-radius: 3px; font-size: .9em; }
+  pre { background: var(--bg-alt); padding: 1rem; border-radius: 6px; overflow-x: auto; }
+  pre code { padding: 0; background: none; color: var(--fg); }
+  .tagline { color: var(--muted); margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+  th, td { text-align: left; padding: .45rem .7rem; border-bottom: 1px solid var(--sel); vertical-align: top; }
+  th { color: var(--ink); font-weight: 700; }
+  td:first-child { color: var(--strong); white-space: nowrap; }
+  .ramp { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0; }
+  .ramp div {
+    flex: 1 1 3.5rem; min-width: 3.5rem; height: 3.5rem; border-radius: 4px;
+    display: flex; align-items: flex-end; justify-content: center;
+    font-size: .68rem; padding-bottom: .2rem;
+  }
+  figure { margin: 1.5rem 0; }
+  figure img { width: 100%; border-radius: 6px; border: 1px solid var(--sel); display: block; }
+  figcaption { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .win { color: var(--ink); font-weight: 700; }
+  footer { color: var(--faint); margin-top: 4rem; border-top: 1px solid var(--sel); padding-top: 1rem; font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>michael</h1>
+<p class="tagline">a grayscale theme for grayscale-forced displays — terminal first</p>
+
+<p>
+Most themes assume color. On a screen forced to grayscale — desktop monitor or
+phone — color themes collapse: their token distinctions become whatever
+lightness <em>accidents</em> the original hues had. <strong>michael</strong> is
+authored grayscale from the start. Meaning is carried by
+<strong>lightness × weight × style × overlay</strong>, never by hue.
+</p>
+
+<p>
+Every value is derived from measurable acceptance gates, and the theme is
+vision-evaluated against <strong>Solarized</strong> and <strong>Flexoki</strong>
+converted to grayscale the same way your display converts everything else.
+</p>
+
+<h2>The ramp</h2>
+<p>
+Ten perceptual steps in OKLCH lightness, off-polar endpoints (never pure
+black/white), five foreground levels per polarity, tuned so adjacent levels
+stay ≥ 0.10 OKLCH apart — distinguishable even after aggressive quantization.
+</p>
+<div class="ramp">
+  <div style="background:#101010;color:#555">#070707</div>
+  <div style="background:#161616;color:#666">#161616</div>
+  <div style="background:#2E2E2E;color:#999">strong</div>
+  <div style="background:#4D4D4D;color:#bbb">fg</div>
+  <div style="background:#707070;color:#ddd">muted</div>
+  <div style="background:#8D8D8D;color:#111">faint</div>
+  <div style="background:#BEBEBE;color:#222">strong</div>
+  <div style="background:#D7D7D7;color:#333">select</div>
+  <div style="background:#EBEBEB;color:#444">bg-alt</div>
+  <div style="background:#F5F5F5;color:#111">paper</div>
+</div>
+
+<h2>The grammar</h2>
+<p>
+With no hue, each channel carries exactly one kind of meaning — so any token
+maps by answering three binary questions instead of "pick a gray":
+</p>
+<table>
+  <tr><th>channel</th><th>values</th><th>meaning</th></tr>
+  <tr><td>level</td><td>ink / strong / fg / muted / faint</td><td>importance</td></tr>
+  <tr><td>weight</td><td>regular / bold</td><td>binding — definitions, keywords</td></tr>
+  <tr><td>style</td><td>none / italic</td><td>kind — comments, parameters, metadata</td></tr>
+  <tr><td>underline</td><td>solid / wavy / dotted</td><td>diagnostics only: error / warning / info</td></tr>
+  <tr><td>overlay</td><td>fill / outline / inverse</td><td>selection, brace match, current search</td></tr>
+</table>
+<p>
+In the terminal, <code>bold-is-bright</code> doubles the weight channel as a
+brightness escape hatch across all 16 ANSI slots.
+</p>
+
+<h2>Showcase</h2>
+
+<figure>
+  <img src="assets/code-python-dark.png" alt="michael dark — Python">
+  <figcaption>dark — keywords <strong>bold ink</strong>, types ink, definitions bold-strong,
+  strings muted, comments faint italic, punctuation faint</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/code-python-light.png" alt="michael light — Python">
+  <figcaption>light — same grammar, polarity-tuned values</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/console-dark.png" alt="michael dark — terminal session">
+  <figcaption>terminal session — git-status trio (modified/deleted/staged) on three
+  distinct grays, dirs and executables pop via bold-is-bright, grep matches hit ink</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/console-light.png" alt="michael light — terminal session">
+  <figcaption>terminal session, light</figcaption>
+</figure>
+
+<h2>Measured, not vibes</h2>
+<p>
+Every hex value must pass acceptance gates before it ships:
+</p>
+<table>
+  <tr><th>gate</th><th>threshold</th></tr>
+  <tr><td>body text contrast</td><td>≥ 7:1 (WCAG AAA)</td></tr>
+  <tr><td>strong / ink levels</td><td>≥ 10:1</td></tr>
+  <tr><td>muted level</td><td>≥ 4.5:1</td></tr>
+  <tr><td>de-emphasized level</td><td>≥ 3:1</td></tr>
+  <tr><td>adjacent level spacing</td><td>≥ 0.10 OKLCH ΔL</td></tr>
+  <tr><td>text on selection</td><td>≥ 4.5:1</td></tr>
+  <tr><td>16-gray quantization</td><td>all states survive (e-ink floor)</td></tr>
+</table>
+
+<h3>Against the baselines</h3>
+<p>
+Solarized and Flexoki are luminance-preserving grayscaled — exactly what a
+grayscale-forced display does to them — then graded blind by a vision model on
+rendered sessions (median of repeated grades, per-class diagnostics).
+</p>
+<table>
+  <tr><th>theme</th><th>terminal separation (0–5)</th><th>readability (0–5)</th></tr>
+  <tr><td class="win">michael dark</td><td class="win">3.0</td><td class="win">4.0</td></tr>
+  <tr><td>flexoki dark</td><td>2.0</td><td>4.0</td></tr>
+  <tr><td>solarized dark</td><td>2.0</td><td>3.0</td></tr>
+  <tr><td>michael light</td><td>2.0</td><td>2.0</td></tr>
+  <tr><td>flexoki light</td><td>1.0</td><td>2.0</td></tr>
+  <tr><td>solarized light</td><td>2.0</td><td>3.0</td></tr>
+</table>
+<p class="faint">
+n = 6 images per theme with median-of-3 grading. Full methodology, per-class
+diagnostics and the experiment log live in the repository
+(<code>corpus/eval-report.md</code>, <code>notes/eval-experiments.org</code>).
+</p>
+
+<h3>Grayscale-forced vs authored-gray</h3>
+<div class="grid2">
+  <figure style="margin:0">
+    <img src="assets/compare-solarized-dark-4bit.png" alt="Solarized dark, forced to 16 grays">
+    <figcaption>Solarized dark, forced to 16 grays — hue distinctions gone</figcaption>
+  </figure>
+  <figure style="margin:0">
+    <img src="assets/compare-michael-dark-4bit.png" alt="michael dark at 16 grays">
+    <figcaption>michael dark at 16 grays — designed for exactly this</figcaption>
+  </figure>
+</div>
+
+<h2>Install</h2>
+<pre><code>git clone https://github.com/charly-vibes/michael.git
+cd michael
+uv sync            # .venv with pillow, pygments
+just install-gnome # terminal profiles + registration
+just install-doom  # Doom Emacs themes
+just install-vscode
+just check         # rebuild + verify all gates</code></pre>
+<p>
+Targets: GNOME Terminal (16-slot palette + <code>bold-is-bright</code>),
+Doom Emacs (<code>doom-michael-light</code> / <code>doom-michael-dark</code>),
+VS Code JSON themes.
+</p>
+
+<h2>Links</h2>
+<p>
+<a href="https://github.com/charly-vibes/michael">Repository</a> ·
+<a href="https://github.com/charly-vibes/michael/blob/main/ramp.json">ramp.json</a> ·
+<a href="https://github.com/charly-vibes/michael/blob/main/tokens.json">tokens.json</a> ·
+<a href="https://github.com/charly-vibes/michael/blob/main/corpus/eval-report.md">eval report</a>
+</p>
+
+<footer>
+michael — authored gray. gates pass or it doesn't ship.
+</footer>
+
+</main>
+</body>
+</html>

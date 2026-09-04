@@ -1,85 +1,90 @@
 # michael
 
-Grayscale-only theme for grayscale-forced displays.
-**Priority: terminal/console/editors** (GNOME Terminal, Doom Emacs, VS Code)
-on 8-bit grayscale-forced screens, desktop + mobile. E-ink is secondary —
-the 4-bit quantization gate is kept as a robustness floor, not the target.
+Grayscale-only color theme for grayscale-forced displays.
+**Priority: terminal/console/editors** — GNOME Terminal, Doom Emacs, VS Code.
+Light + dark variants. E-ink is secondary: the 4-bit quantization gate stays
+as a robustness floor, not the design target.
 
-Philosophy: Solarized's lightness-relationship discipline + Flexoki's
-off-polar endpoints and step-count restraint. No hue anywhere; meaning is
-carried by **lightness × weight × style × overlay**, never by hue.
+**Live docs & showcase:** <https://charly-vibes.github.io/michael/>
 
-## Layout
+## Why
 
-- `ramp.json` — single source of truth: 8 roles per variant, OKLCH L + hex, gate-derived
-- `tokens.json` — semantic map: token → (level, weight, style, overlay)
-- `bench/check.py` — acceptance gates (run via `just check`)
-- `generators/` — emit GNOME Terminal dconf, Doom Emacs deftheme, VS Code JSON
-- `out/` — generated artifacts (do not edit)
+On a grayscale-forced screen (desktop or mobile), color themes lose their hue
+and their token distinctions collapse to whatever lightness accidents remain.
+michael is authored grayscale from the start: meaning is carried by
+**lightness × weight × style × overlay** — never by hue. Evaluated against
+Solarized and Flexoki converted the same way your screens convert them.
 
-## Semantic grammar
+## The grammar
 
 | Channel | Values | Meaning |
 |---|---|---|
-| level | ink/strong/fg/muted/faint | importance |
-| weight | regular/bold | binding (definitions, bound keywords) |
-| style | none/italic | kind (metadata: comments, parameters) |
-| underline | solid/wavy/dotted | diagnostics only (error/warning/info) |
-| overlay | bgFill/outline/inverse | selection, brace match, current search |
+| level | ink / strong / fg / muted / faint | importance |
+| weight | regular / bold | binding (definitions, keywords) |
+| style | none / italic | kind (comments, parameters, metadata) |
+| underline | solid / wavy / dotted | diagnostics only (error / warning / info) |
+| overlay | bgFill / outline / inverse | selection, brace match, search |
 
-Bold is also the terminal's ANSI-bright flag (`bold-is-bright=true`),
-multiplexing weight into the 16-slot palette.
+Bold is also the terminal's ANSI-bright flag (`bold-is-bright=true`), so the
+weight channel doubles as a brightness escape hatch in the 16-slot palette.
 
 ## Benchmarks (acceptance gates)
 
-1. WCAG vs bg: ink/strong ≥ 10:1, fg ≥ 7:1, muted ≥ 4.5:1, faint ≥ 3:1
+`just check` runs gates against both variants and fails on violation:
+
+1. WCAG contrast vs bg: ink/strong ≥ 10:1, fg ≥ 7:1, muted ≥ 4.5:1, faint ≥ 3:1
 2. ΔL ≥ 0.10 OKLCH between adjacent text levels
 3. Text-on-overlay: ink/strong/fg ≥ 4.5:1, muted ≥ 3:1 vs selection fill
-4. 4-bit (16-gray) quantization survival — simulates e-ink dithering
-5. Selection fill visible at 4-bit
+4. 4-bit (16-gray) quantization survival — robustness floor, e-ink included
+5. Selection fill must be visible after quantization
 
-All gates must pass for **both** variants before any output ships.
-`just check` is the gate runner.
+## Vision eval (pi + OpenRouter)
 
-## Commands
+`bench/eval.py` has a vision model grade rendered themes **blind** (median of
+repeats), producing per-class diagnostics: which token classes collide, worst
+pairs, and a root-cause statement per render. Baselines are Solarized and
+Flexoki, luminance-preserving grayscaled — exactly what your displays do to
+color themes. Headline results live in `corpus/eval-report.md`;
+`notes/eval-experiments.org` is the full experiment log.
 
-Environment is managed with **uv** (`uv sync` after clone).
+## Install
 
 ```sh
-uv sync            # set up .venv (pillow, pygments, ruff)
-just build         # regenerate out/
-just check         # build + run all gates + render corpus PNGs
-just lint          # ruff
-just install-gnome # dconf profiles
-just install-doom  # copy themes to ~/.doom.d/themes/
+uv sync               # set up .venv
+just build            # regenerate out/
+just check            # build + gates + render corpus
+just lint             # ruff
+
+just install-gnome    # terminal profiles + ProfilesList registration
+just install-doom     # ~/.doom.d/themes/
 just install-vscode
 ```
 
-## Corpus rendering + vision eval
+After `install-gnome`, pick *michael light/dark* in Terminal preferences.
 
-`bench/render.py` renders a six-language code corpus (Python, Julia, Rust,
-TypeScript, Clojure, C#) through the token grammar using Pygments +
-JetBrains Mono, PLUS a synthetic console session (git status/ls/grep/diff
-with real SGR sequences, honoring bold-is-bright) — for michael AND for
-Solarized/Flexoki baselines.
-Baselines go through a luminance-preserving grayscale conversion: exactly
-what a grayscale-forced display does to a color theme (WCAG ratios kept,
-hue destroyed). Each render gets a full PNG + a 4-bit quantized version
-(e-ink floor test).
+## Terminal palette design
 
-`bench/eval.py` has a vision model (headless `pi` + OpenRouter, default
-`google/gemini-2.5-flash-lite`) grade every image blind on a rubric
-(token-class separation, readability, collisions) and ranks the themes:
+The 16 ANSI slots are assigned for real console semantics, not hue parity:
+git-status trio (modified/deleted/staged) lands on three distinct grays;
+bold-red grep matches pop to ink via bold-is-bright; dirs and executables
+escape to brighter slots when bolded. See `bench/ansi.py` (single source of
+truth, shared with the eval's console-session renderer).
 
-```sh
-just eval-quick   # ~6 images: python corpus, 4-bit, michael vs solarized-light
-just eval         # full matrix: 6 themes x 6 languages x 2 quantizations
-uv run bench/eval.py --langs python,rust --themes michael   # custom subset
-uv run bench/eval.py --model google/gemma-4-31b-it:free     # free model
-```
+## Repo layout
 
-Iteration pattern: `just eval-quick` while tuning the ramp (verdicts are
-cached and resume across runs), `just eval` for a release-grade pass.
+| path | what |
+|---|---|
+| `ramp.json` | 8 roles × 2 variants, OKLCH L + hex, gate-derived |
+| `tokens.json` | semantic map: token → (level, weight, style, overlay) |
+| `bench/check.py` | acceptance gates |
+| `bench/render.py` | corpus renderer (code + console sessions, all themes) |
+| `bench/eval.py` | blind vision eval via headless pi + OpenRouter |
+| `bench/ansi.py` | ANSI slot map (single source of truth) |
+| `bench/baselines.py` | Solarized / Flexoki baselines + canonical ANSI palettes |
+| `generators/` | GNOME Terminal dconf, Doom deftheme, VS Code JSON |
+| `notes/eval-experiments.org` | experiment log |
+| `site/` | GitHub Pages showcase |
 
-Results land in `corpus/eval-results.json`. The final check is still a
-real e-ink/grayscale screen — the judge is a proxy.
+## License
+
+See [LICENSE](LICENSE).
