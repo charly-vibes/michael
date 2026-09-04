@@ -100,6 +100,9 @@ function setLang(lang) {
   const target = document.getElementById('codeTarget');
   target.className = 'hljs language-' + lang;
   target.textContent = CODE[lang];
+  // hljs 11 marks elements with data-highlighted and skips re-highlighting
+  target.removeAttribute('data-highlighted');
+  target.removeAttribute('data-hljs');
   hljs.highlightElement(target);
   document.querySelectorAll('#langPills .pill').forEach(p =>
     p.classList.toggle('on', p.dataset.lang === lang));
