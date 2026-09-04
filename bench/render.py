@@ -15,6 +15,7 @@ Usage: uv run bench/render.py   (writes to corpus/render/)
 import json
 import os
 
+from ansi import ansi16 as ramp_ansi16
 from baselines import build_baselines
 from PIL import Image, ImageDraw, ImageFont
 from pygments import lex
@@ -303,6 +304,102 @@ def render_theme(theme, corpus, out_dir, scale=2):
     return paths
 
 
+# --------------------------------------------- console session (ANSI/SGR) ---
+def _sgr(*params):
+    return f'\x1b[{";".join(map(str, params))}m'
+
+
+def _console_lines():
+    """Realistic console session with embedded SGR sequences (slot-level truth)."""
+    s = _sgr
+    reset = s(0)
+    return [
+        '$ git status',
+        s(32) + 'On branch main' + reset,
+        s(33) + 'Your branch is ahead of origin/main by 2 commits.' + reset,
+        '',
+        '$ git status --short',
+        s(31) + 'M  ' + reset + 'src/theme.py',
+        s(32) + 'A  ' + reset + 'tests/test_palette.py',
+        s(90) + '?? notes.org' + reset,
+        '',
+        '$ ls -la',
+        s(1, 34) + 'corpus/' + reset,
+        '-rw-r--r--  ramp.json',
+        s(1, 32) + 'build.sh' + reset,
+        s(31) + 'backup.tar.gz' + reset,
+        '',
+        '$ grep -n faint ramp.py',
+        s(1, 31) + '42' + reset + ':    faint:   ' + s(1, 31) + '"#8D8D8D"' + reset,
+        '',
+        '$ git diff',
+        s(31) + '- "level": 0.80,' + reset,
+        s(32) + '+ "level": 0.82,' + reset,
+        s(90) + '  # 4-bit survival re-checked' + reset,
+    ]
+
+
+def render_console(theme, ansi_palette, out_dir, scale=2):
+    """Render an SGR-tokenized console session. ANSI codes are the tokenizer:
+    no pygments here. Simulates bold-is-bright (bold + slot 0-7 -> slot + 8)."""
+    fonts = {}
+
+    def font(bold, italic):
+        key = (bold, italic)
+        if key not in fonts:
+            fonts[key] = ImageFont.truetype(os.path.join(FONT_DIR, FONTS[key]), 14 * scale)
+        return fonts[key]
+
+    def col(c):
+        return gray_keep_lum(c) if theme['grayscale'] else c
+
+    lines = _console_lines()
+    probe = font(False, False)
+    ch_w = probe.getbbox('M')[2] - probe.getbbox('M')[0]
+    line_h = int(14 * scale * 1.55)
+    pad = 12 * scale
+    w = pad * 2 + ch_w * 72
+    h = pad * 2 + line_h * len(lines)
+    img = Image.new('RGB', (w, h), col(theme['bg']))
+    draw = ImageDraw.Draw(img)
+
+    for lineno, line in enumerate(lines):
+        y = pad + lineno * line_h
+        x = pad
+        slot, bold = None, False
+        i = 0
+        while i < len(line):
+            if line[i] == '\x1b' and i + 1 < len(line) and line[i + 1] == '[':
+                end = line.find('m', i)
+                if end != -1:
+                    for p in line[i + 2:end].split(';'):
+                        p = int(p) if p else 0
+                        if p == 0:
+                            slot, bold = None, False
+                        elif p == 1:
+                            bold = True
+                        elif 30 <= p <= 37:
+                            slot = p - 30
+                        elif 90 <= p <= 97:
+                            slot = p - 90 + 8
+                    i = end + 1
+                    continue
+            j = i
+            while j < len(line) and line[j] != '\x1b':
+                j += 1
+            text = line[i:j]
+            use_slot = slot + 8 if (bold and slot is not None and slot < 8) else slot
+            color = theme['default'] if use_slot is None else ansi_palette[use_slot]
+            draw.text((x, y), text, font=font(bold, False), fill=col(color))
+            x += ch_w * len(text)
+            i = j
+
+    base = os.path.join(out_dir, f"console-{theme['name']}")
+    img.save(base + '.png')
+    img.quantize(colors=16, dither=Image.Dither.NONE).save(base + '-4bit.png')
+    return [base + '.png', base + '-4bit.png']
+
+
 if __name__ == '__main__':
     with open(os.path.join(ROOT, 'ramp.json')) as fh:
         ramp = json.load(fh)
@@ -317,10 +414,15 @@ if __name__ == '__main__':
     total = 0
     for vname in ramp['variants']:
         paths = render_theme(michael_styles(vname, ramp, tokens_map), CORPUS, out_dir)
+        paths += render_console({'name': f'michael-{vname}', 'bg': ramp['variants'][vname]['bg']['hex'],
+                                 'default': ramp['variants'][vname]['fg']['hex'],
+                                 'grayscale': False},
+                                ramp_ansi16(ramp['variants'][vname]), out_dir)
         total += len(paths)
-        print(f"rendered michael-{vname}: {len(CORPUS)} files x (full + 4bit)")
+        print(f"rendered michael-{vname}: {len(CORPUS)} code files + console session")
     for name, theme in build_baselines().items():
         paths = render_theme(theme, CORPUS, out_dir)
+        paths += render_console(theme, theme['ansi16'], out_dir)
         total += len(paths)
-        print(f"rendered {name}: {len(CORPUS)} files x (full + 4bit, luminance-preserving gray)")
+        print(f"rendered {name}: {len(CORPUS)} code files + console session")
     print(f"total images: {total}")

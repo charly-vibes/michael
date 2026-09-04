@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RENDER_DIR = os.path.join(HERE, '..', 'corpus', 'render')
-LANGS = ('typescript', 'clojure', 'python', 'julia', 'rust', 'csharp')
+LANGS = ('console', 'typescript', 'clojure', 'python', 'julia', 'rust', 'csharp')
 CLASSES = ('keywords', 'types', 'function_names', 'strings', 'numbers', 'comments', 'punctuation')
 
 RUBRIC = f"""You are grading a code-editor theme rendered as a screenshot of source code. \
@@ -209,17 +209,18 @@ def main():
             return img, verdicts[0]
         med = valid[len(valid) // 2]  # the median-run verdict, unmodified
         med['repeats'] = [v['separation'] for v in verdicts]
-        med['all_verdicts'] = verdicts
         return img, med
 
     cache_file = cache_path
 
     def save():
-        with open(cache_file, 'w') as f:
+        tmp = cache_file + '.tmp'
+        with open(tmp, 'w') as f:  # atomic: crash mid-dump can't corrupt cache
             json.dump({'model': args.model,
                        'results': {f'{l}-{t}-{q}': v
                                    for (l, t, q), v in results.items()}},
                       f, indent=2)
+        os.replace(tmp, cache_file)
 
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         for done, (img, v) in enumerate(pool.map(grade, todo), 1):

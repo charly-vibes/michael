@@ -2,12 +2,12 @@
 
 | theme | separation | readability | samples |
 |---|---|---|---|
-| michael-light | 1.80 | 2.00 | 5 |
-| michael-dark | 1.80 | 2.20 | 5 |
-| flexoki-light | 1.67 | 2.08 | 12 |
-| flexoki-dark | 1.58 | 2.00 | 12 |
-| solarized-dark | 1.50 | 2.08 | 12 |
-| solarized-light | 1.25 | 1.92 | 12 |
+| michael-light | 1.83 | 2.00 | 6 |
+| flexoki-light | 1.62 | 2.08 | 13 |
+| solarized-dark | 1.54 | 2.08 | 13 |
+| flexoki-dark | 1.54 | 2.00 | 13 |
+| michael-dark | 1.50 | 2.00 | 6 |
+| solarized-light | 1.15 | 1.77 | 13 |
 
 ## michael-light
 
@@ -16,17 +16,18 @@
 | class | distinct | verdict |
 |---|---|---|
 | keywords | 3.00 | solid |
-| types | 1.00 | BROKEN |
-| function_names | 1.00 | BROKEN |
-| strings | 1.80 | weak |
-| numbers | 1.20 | BROKEN |
-| comments | 1.00 | BROKEN |
+| types | 0.83 | BROKEN |
+| function_names | 0.83 | BROKEN |
+| strings | 1.83 | weak |
+| numbers | 1.17 | BROKEN |
+| comments | 1.17 | BROKEN |
 | punctuation | 1.00 | BROKEN |
 
 ### Most-colliding pairs
 
 - 4x: types vs function_names
 - 1x: strings vs comments
+- 1x: numbers vs punctuation
 
 ### Judge root causes (verbatim)
 
@@ -35,38 +36,7 @@
 - (python, 4bit) body text too low contrast
 - (typescript, 4bit) type and function name gray value too close to general text gray value
 - (csharp, 4bit) Type and function_name colors are identical.
-
-Worst language: **clojure** (sep 1.00)
-
-## michael-dark
-
-### Class distinctness (mean 0-3)
-
-| class | distinct | verdict |
-|---|---|---|
-| keywords | 3.00 | solid |
-| types | 0.80 | BROKEN |
-| function_names | 1.60 | weak |
-| strings | 1.60 | weak |
-| numbers | 0.60 | BROKEN |
-| comments | 0.20 | BROKEN |
-| punctuation | 0.80 | BROKEN |
-
-### Most-colliding pairs
-
-- 1x: function_names vs types
-- 1x: types vs function_names
-- 1x: types vs numbers
-- 1x: types vs strings
-- 1x: numbers vs punctuation
-
-### Judge root causes (verbatim)
-
-- (clojure, 4bit) Lack of distinct color for types, numbers, function names, and punctuation.
-- (csharp, 4bit) Lack of visual distinction between types, function_names, numbers, and punctuation.
-- (python, 4bit) type, number, and comment colors are too similar and lack contrast.
-- (rust, 4bit) Non-bold text lacks distinct styling for types, strings, and punctuation.
-- (typescript, 4bit) Numbers and punctuation share the same color, making them indistinguishable.
+- (console, 4bit) body text color is too close to numbers and punctuation
 
 Worst language: **clojure** (sep 1.00)
 
@@ -76,13 +46,13 @@ Worst language: **clojure** (sep 1.00)
 
 | class | distinct | verdict |
 |---|---|---|
-| keywords | 2.75 | solid |
-| types | 1.17 | BROKEN |
-| function_names | 1.08 | BROKEN |
+| keywords | 2.54 | solid |
+| types | 1.08 | BROKEN |
+| function_names | 1.00 | BROKEN |
 | strings | 2.00 | weak |
-| numbers | 0.92 | BROKEN |
-| comments | 1.50 | weak |
-| punctuation | 1.08 | BROKEN |
+| numbers | 0.85 | BROKEN |
+| comments | 1.62 | weak |
+| punctuation | 1.00 | BROKEN |
 
 ### Most-colliding pairs
 
@@ -105,54 +75,19 @@ Worst language: **clojure** (sep 1.00)
 
 Worst language: **csharp** (sep 1.00)
 
-## flexoki-dark
-
-### Class distinctness (mean 0-3)
-
-| class | distinct | verdict |
-|---|---|---|
-| keywords | 2.08 | weak |
-| types | 0.83 | BROKEN |
-| function_names | 0.92 | BROKEN |
-| strings | 2.00 | weak |
-| numbers | 1.08 | BROKEN |
-| comments | 0.45 | BROKEN |
-| punctuation | 1.42 | BROKEN |
-
-### Most-colliding pairs
-
-- 3x: types vs function_names
-- 2x: keywords vs types
-- 1x: keywords vs function_names
-- 1x: function_names vs types
-- 1x: strings vs numbers
-
-### Judge root causes (verbatim)
-
-- (clojure, full) lack of contrast between keywords, function names, and punctuation
-- (julia, full) body text too low contrast
-- (python, full) body text too low contrast
-- (rust, full) types, function_names, and numbers are indistinguishable from body text.
-- (typescript, full) keyword/type/function_name gray too close to background
-- (clojure, 4bit) Keyword color is too similar to function name and general code text.
-- (csharp, 4bit) lack of differentiation between types and function names
-- (csharp, full) Uniform color for keywords, types, function_names, and numbers.
-
-Worst language: **clojure** (sep 1.00)
-
 ## solarized-dark
 
 ### Class distinctness (mean 0-3)
 
 | class | distinct | verdict |
 |---|---|---|
-| keywords | 1.42 | BROKEN |
-| types | 1.08 | BROKEN |
-| function_names | 1.25 | BROKEN |
-| strings | 1.83 | weak |
-| numbers | 1.42 | BROKEN |
-| comments | 0.67 | BROKEN |
-| punctuation | 1.17 | BROKEN |
+| keywords | 1.54 | weak |
+| types | 1.00 | BROKEN |
+| function_names | 1.23 | BROKEN |
+| strings | 1.92 | weak |
+| numbers | 1.38 | BROKEN |
+| comments | 0.62 | BROKEN |
+| punctuation | 1.15 | BROKEN |
 
 ### Most-colliding pairs
 
@@ -175,19 +110,87 @@ Worst language: **clojure** (sep 1.00)
 
 Worst language: **rust** (sep 0.50)
 
+## flexoki-dark
+
+### Class distinctness (mean 0-3)
+
+| class | distinct | verdict |
+|---|---|---|
+| keywords | 1.92 | weak |
+| types | 0.77 | BROKEN |
+| function_names | 0.85 | BROKEN |
+| strings | 1.83 | weak |
+| numbers | 1.00 | BROKEN |
+| comments | 0.50 | BROKEN |
+| punctuation | 1.38 | BROKEN |
+
+### Most-colliding pairs
+
+- 3x: types vs function_names
+- 2x: keywords vs types
+- 1x: keywords vs function_names
+- 1x: function_names vs types
+- 1x: strings vs numbers
+
+### Judge root causes (verbatim)
+
+- (clojure, full) lack of contrast between keywords, function names, and punctuation
+- (julia, full) body text too low contrast
+- (python, full) body text too low contrast
+- (rust, full) types, function_names, and numbers are indistinguishable from body text.
+- (typescript, full) keyword/type/function_name gray too close to background
+- (clojure, 4bit) Keyword color is too similar to function name and general code text.
+- (csharp, 4bit) lack of differentiation between types and function names
+- (csharp, full) Uniform color for keywords, types, function_names, and numbers.
+
+Worst language: **clojure** (sep 1.00)
+
+## michael-dark
+
+### Class distinctness (mean 0-3)
+
+| class | distinct | verdict |
+|---|---|---|
+| keywords | 2.50 | solid |
+| types | 0.67 | BROKEN |
+| function_names | 1.33 | BROKEN |
+| strings | 1.33 | BROKEN |
+| numbers | 0.50 | BROKEN |
+| comments | 0.17 | BROKEN |
+| punctuation | 0.67 | BROKEN |
+
+### Most-colliding pairs
+
+- 1x: function_names vs types
+- 1x: types vs function_names
+- 1x: types vs numbers
+- 1x: types vs strings
+- 1x: numbers vs punctuation
+
+### Judge root causes (verbatim)
+
+- (clojure, 4bit) Lack of distinct color for types, numbers, function names, and punctuation.
+- (csharp, 4bit) Lack of visual distinction between types, function_names, numbers, and punctuation.
+- (python, 4bit) type, number, and comment colors are too similar and lack contrast.
+- (rust, 4bit) Non-bold text lacks distinct styling for types, strings, and punctuation.
+- (typescript, 4bit) Numbers and punctuation share the same color, making them indistinguishable.
+- (console, 4bit) Lack of color and weight differentiation between token classes.
+
+Worst language: **console** (sep 0.00)
+
 ## solarized-light
 
 ### Class distinctness (mean 0-3)
 
 | class | distinct | verdict |
 |---|---|---|
-| keywords | 2.42 | weak |
-| types | 0.83 | BROKEN |
-| function_names | 0.83 | BROKEN |
-| strings | 1.00 | BROKEN |
-| numbers | 0.83 | BROKEN |
-| comments | 0.83 | BROKEN |
-| punctuation | 1.00 | BROKEN |
+| keywords | 2.23 | weak |
+| types | 0.77 | BROKEN |
+| function_names | 0.77 | BROKEN |
+| strings | 0.92 | BROKEN |
+| numbers | 0.77 | BROKEN |
+| comments | 0.85 | BROKEN |
+| punctuation | 0.92 | BROKEN |
 
 ### Most-colliding pairs
 
@@ -208,4 +211,4 @@ Worst language: **rust** (sep 0.50)
 - (csharp, 4bit) color of types too close to color of keywords
 - (julia, 4bit) white/very light gray text color for strings/numbers/punctuation has no contrast against the background
 
-Worst language: **csharp** (sep 1.00)
+Worst language: **console** (sep 0.00)

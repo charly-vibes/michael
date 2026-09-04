@@ -1,7 +1,9 @@
 # michael
 
-Grayscale-only theme for grayscale-forced displays and e-ink panels.
-Light + dark variants. Targets: GNOME Terminal, Doom Emacs, VS Code.
+Grayscale-only theme for grayscale-forced displays.
+**Priority: terminal/console/editors** (GNOME Terminal, Doom Emacs, VS Code)
+on 8-bit grayscale-forced screens, desktop + mobile. E-ink is secondary —
+the 4-bit quantization gate is kept as a robustness floor, not the target.
 
 Philosophy: Solarized's lightness-relationship discipline + Flexoki's
 off-polar endpoints and step-count restraint. No hue anywhere; meaning is
@@ -55,9 +57,11 @@ just install-vscode
 
 ## Corpus rendering + vision eval
 
-`bench/render.py` renders the six-language corpus (Python, Julia, Rust,
+`bench/render.py` renders a six-language code corpus (Python, Julia, Rust,
 TypeScript, Clojure, C#) through the token grammar using Pygments +
-JetBrains Mono — for michael AND for Solarized/Flexoki baselines.
+JetBrains Mono, PLUS a synthetic console session (git status/ls/grep/diff
+with real SGR sequences, honoring bold-is-bright) — for michael AND for
+Solarized/Flexoki baselines.
 Baselines go through a luminance-preserving grayscale conversion: exactly
 what a grayscale-forced display does to a color theme (WCAG ratios kept,
 hue destroyed). Each render gets a full PNG + a 4-bit quantized version

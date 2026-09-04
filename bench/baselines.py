@@ -78,8 +78,11 @@ FLEXOKI_MAP = {
 
 
 def build_baselines():
-    """Return {name: {bg, gutter, default, tokens: {kind: (hex, bold, italic)}}}.
+    """Return {name: {bg, gutter, default, tokens, ansi16, grayscale}}.
 
+    ansi16 = canonical terminal palette (used by the console-session corpus).
+    For Solarized these are the official X-resource values; Flexoki's spec maps
+    accents to both normal and bright slots (bold carries the emphasis).
     Colors are NOT pre-grayscaled here; render.py applies luminance-preserving
     grayscale to baseline themes (flag) to simulate the user's forced displays.
     """
@@ -93,7 +96,7 @@ def build_baselines():
                 c = c[0 if variant == 'light' else 1]
             tokens[kind] = (c, bold, italic)
         return {'name': name, 'bg': bg, 'gutter': gutter, 'default': default,
-                'tokens': tokens, 'grayscale': True}
+                'tokens': tokens, 'ansi16': ANSI16[name], 'grayscale': True}
 
     # Solarized: light bg=base3 fg=base00; dark bg=base03 fg=base0
     themes['solarized-light'] = mk(
@@ -112,3 +115,32 @@ def build_baselines():
         FLEXOKI['paper-1'], FLEXOKI_MAP, FLEXOKI, 'dark')
 
     return themes
+
+
+# Canonical ANSI-16 palettes (console-session corpus). Solarized = official
+# X-resource values. Flexoki = accents for both normal and bright (the spec
+# relies on bold for emphasis); grays for black/white.
+_ANSI = lambda slots: [c for c in slots]
+SOLARIZED_ANSI = {
+    'light': _ANSI(['#073642', '#dc322f', '#859900', '#b58900',
+                    '#268bd2', '#d33682', '#2aa198', '#eee8d5',
+                    '#002b36', '#cb4b16', '#586e75', '#657b83',
+                    '#839496', '#6c71c4', '#93a1a1', '#fdf6e3']),
+    'dark': _ANSI(['#073642', '#dc322f', '#859900', '#b58900',
+                   '#268bd2', '#d33682', '#2aa198', '#eee8d5',
+                   '#002b36', '#cb4b16', '#586e75', '#657b83',
+                   '#839496', '#6c71c4', '#93a1a1', '#fdf6e3']),
+}
+_FLEXOKI_ACCENTS = ['#d14d41', '#879a39', '#d0a215', '#4385be', '#d5477e', '#3aa99f']
+FLEXOKI_ANSI = {
+    'dark': _ANSI(['#100f0f', *_FLEXOKI_ACCENTS, '#cecdc3',
+                   '#343331', *_FLEXOKI_ACCENTS, '#cecdc3']),
+    'light': _ANSI(['#100f0f', '#af3029', '#66800b', '#ad8301', '#205ea6', '#a02f6f', '#24837b', '#cecdc3',
+                    '#343331', '#af3029', '#66800b', '#ad8301', '#205ea6', '#a02f6f', '#24837b', '#100f0f']),
+}
+ANSI16 = {
+    'solarized-light': SOLARIZED_ANSI['light'],
+    'solarized-dark': SOLARIZED_ANSI['dark'],
+    'flexoki-light': FLEXOKI_ANSI['light'],
+    'flexoki-dark': FLEXOKI_ANSI['dark'],
+}
