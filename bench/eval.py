@@ -12,7 +12,8 @@ unless --no-cache.
 
 Usage:
     uv run bench/eval.py [--model google/gemini-2.5-flash-lite] [--jobs 2]
-        [--filter michael] [--quant full|4bit|both] [--no-cache]
+        [--filter michael] [--quant full|4bit|both] [--langs python,rust]
+        [--themes "michael,solarized-light"] [--repeats 3] [--no-cache]
 """
 import argparse
 import json
@@ -241,12 +242,19 @@ def main():
     cache_file = cache_path
 
     def save():
+        # merge with disk state: --no-cache skips REUSING verdicts, never
+        # discards them (a no-cache run once wiped 52 verdicts)
+        merged = {}
+        try:
+            with open(cache_file) as f:
+                merged = json.load(f).get('results', {})
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+        merged.update({f'{l}-{t}-{q}': v
+                       for (l, t, q), v in results.items()})
         tmp = cache_file + '.tmp'
         with open(tmp, 'w') as f:  # atomic: crash mid-dump can't corrupt cache
-            json.dump({'model': args.model,
-                       'results': {f'{l}-{t}-{q}': v
-                                   for (l, t, q), v in results.items()}},
-                      f, indent=2)
+            json.dump({'model': args.model, 'results': merged}, f, indent=2)
         os.replace(tmp, cache_file)
 
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:

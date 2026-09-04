@@ -148,8 +148,8 @@ function renderGrid() {
 document.querySelectorAll('#quantRow .pill').forEach(b => {
   b.onclick = () => {
     const isMode = 'm' in b.dataset;
-    document.querySelectorAll('#quantRow .pill').filter;
-    for (const x of document.querySelectorAll('#quantRow .pill')) {
+    const pills = [...document.querySelectorAll('#quantRow .pill')];
+    for (const x of pills) {
       if (('m' in x.dataset) === isMode) x.classList.remove('on');
     }
     b.classList.add('on');

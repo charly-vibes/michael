@@ -17,6 +17,10 @@ python3 generators/windows_terminal.py  > /dev/null
 for t in $Targets; do
   case "$t" in
     gnome)
+      if ! command -v dconf >/dev/null 2>&1; then
+        echo "gnome: dconf not found — skipping (outputs are in out/gnome-terminal/)"
+        continue
+      fi
       dconf load /org/gnome/terminal/legacy/profiles:/ < out/gnome-terminal/michael-light.dconf
       dconf load /org/gnome/terminal/legacy/profiles:/ < out/gnome-terminal/michael-dark.dconf
       sh out/gnome-terminal/register.sh
