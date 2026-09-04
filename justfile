@@ -43,5 +43,12 @@ install-vscode: build
     cp -f out/vscode/michael-*-color-theme.json ~/.config/Code/User/
     @echo "Select 'michael light' / 'michael dark' via Preferences: Color Theme."
 
+# Render corpus + publish gallery assets (images + manifest) to site/
+gallery: build
+    uv run bench/render.py
+    mkdir -p site/assets/gallery
+    cp -f corpus/render/*.png site/assets/gallery/
+    cp -f corpus/render/manifest.json site/assets/gallery/
+
 clean:
     rm -rf out corpus/render

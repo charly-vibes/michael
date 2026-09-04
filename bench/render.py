@@ -426,3 +426,20 @@ if __name__ == '__main__':
         total += len(paths)
         print(f"rendered {name}: {len(CORPUS)} code files + console session")
     print(f"total images: {total}")
+
+    # manifest for the site gallery: filename -> structured metadata
+    import re
+    entries = []
+    for fname in sorted(os.listdir(out_dir)):
+        m = re.match(r'^(console|typescript|clojure|python|julia|rust|csharp)-(.+?)(?:-(4bit))?\.png$', fname)
+        if not m:
+            continue
+        entries.append({
+            'file': fname,
+            'lang': m.group(1),
+            'theme': m.group(2),
+            'quant': '4bit' if m.group(3) else 'full',
+        })
+    with open(os.path.join(out_dir, 'manifest.json'), 'w') as fh:
+        json.dump(entries, fh, indent=2)
+    print(f"manifest: {len(entries)} entries")

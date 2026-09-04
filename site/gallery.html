@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery — michael</title>
+<meta name="description" content="All michael renders: 6 languages + console session, light/dark, vs Solarized and Flexoki baselines, full-fidelity and 4-bit.">
+<style>
+  :root {
+    --bg: #070707; --bg-alt: #161616; --fg: #9E9E9E; --strong: #BEBEBE;
+    --ink: #F5F5F5; --muted: #7A7A7A; --faint: #5D5D5D; --sel: #2E2E2E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); margin: 0;
+    font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+    line-height: 1.5; font-size: 15px;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(7,7,7,.92); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--sel); padding: .9rem 1.5rem;
+  }
+  header .row { max-width: 80rem; margin: 0 auto; display: flex; flex-wrap: wrap; gap: .5rem .4rem; align-items: center; }
+  a.home { color: var(--ink); font-weight: 700; text-decoration: none; margin-right: .75rem; }
+  a.home:hover { color: var(--strong); }
+  .pill {
+    border: 1px solid var(--sel); background: var(--bg-alt); color: var(--muted);
+    padding: .18rem .6rem; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: .82rem; transition: all .15s;
+  }
+  .pill:hover { color: var(--strong); border-color: var(--muted); }
+  .pill.on { color: var(--ink); border-color: var(--ink); background: var(--sel); }
+  .sep { width: 1px; height: 1.2rem; background: var(--sel); margin: 0 .35rem; }
+  .count { color: var(--faint); font-size: .8rem; margin-left: auto; }
+  main { max-width: 80rem; margin: 0 auto; padding: 1.5rem; }
+  .card {
+    background: var(--bg-alt); border: 1px solid var(--sel); border-radius: 6px;
+    overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .card img { width: 100%; display: block; }
+  .card .cap {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: .5rem .8rem; font-size: .82rem; color: var(--muted);
+    border-top: 1px solid var(--sel);
+  }
+  .card .cap .theme { color: var(--strong); }
+  .card .cap .q { color: var(--faint); }
+  .hidden { display: none; }
+  footer { color: var(--faint); text-align: center; padding: 2rem 1rem 3rem; font-size: .85rem; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="row" id="langRow">
+    <a class="home" href="./">michael</a>
+    <span class="faint">lang:</span>
+    <!-- lang pills injected -->
+  </div>
+  <div class="row" id="themeRow" style="margin-top:.4rem">
+    <span class="faint">theme:</span>
+    <!-- theme pills injected -->
+  </div>
+  <div class="row" id="quantRow" style="margin-top:.4rem">
+    <span class="faint">quant:</span>
+    <button class="pill on" data-q="both">both</button>
+    <button class="pill" data-q="full">full</button>
+    <button class="pill" data-q="4bit">4-bit</button>
+    <span class="count" id="count"></span>
+  </div>
+</header>
+
+<main>
+  <div id="grid"></div>
+  <div id="empty" style="display:none;color:var(--faint);text-align:center;padding:3rem 0">
+    nothing matches that combination
+  </div>
+</main>
+
+<footer>
+  rendered by <a href="https://github.com/charly-vibes/michael">michael</a>'s own eval pipeline ·
+  <a href="./">docs</a>
+</footer>
+
+<script>
+const LANGS = ['console', 'python', 'julia', 'rust', 'typescript', 'clojure', 'csharp'];
+let manifest = [];
+const state = { lang: 'all', theme: 'all', quant: 'both' };
+
+function pill(label, active, onclick) {
+  const b = document.createElement('button');
+  b.className = 'pill' + (active ? ' on' : '');
+  b.textContent = label;
+  b.onclick = onclick;
+  return b;
+}
+
+function renderControls() {
+  const langRow = document.getElementById('langRow');
+  const themeRow = document.getElementById('themeRow');
+  [...langRow.querySelectorAll('.pill')].forEach(p => p.remove());
+  [...themeRow.querySelectorAll('.pill')].forEach(p => p.remove());
+
+  const themes = [...new Set(manifest.map(e => e.theme))].sort();
+
+  langRow.appendChild(pill('all', state.lang === 'all', () => { state.lang = 'all'; renderControls(); renderGrid(); }));
+  for (const lang of LANGS)
+    langRow.appendChild(pill(lang, state.lang === lang, () => { state.lang = lang; renderControls(); renderGrid(); }));
+
+  themeRow.appendChild(pill('all', state.theme === 'all', () => { state.theme = 'all'; renderControls(); renderGrid(); }));
+  for (const t of themes)
+    themeRow.appendChild(pill(t, state.theme === t, () => { state.theme = t; renderControls(); renderGrid(); }));
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const shown = manifest.filter(e =>
+    (state.lang === 'all' || e.lang === state.lang) &&
+    (state.theme === 'all' || e.theme === state.theme) &&
+    (state.quant === 'both' || e.quant === state.quant));
+
+  for (const e of shown) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.src = 'assets/gallery/' + e.file;
+    img.alt = e.lang + ' — ' + e.theme;
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.innerHTML = `<span class="theme">${e.lang} · ${e.theme}</span><span class="q">${e.quant}</span>`;
+    card.append(img, cap);
+    grid.appendChild(card);
+  }
+  document.getElementById('empty').style.display = shown.length ? 'none' : 'block';
+  document.getElementById('count').textContent = shown.length + ' / ' + manifest.length;
+}
+
+document.querySelectorAll('#quantRow .pill').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#quantRow .pill').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    state.quant = b.dataset.q;
+    renderGrid();
+  };
+});
+
+fetch('assets/gallery/manifest.json')
+  .then(r => r.json())
+  .then(m => { manifest = m; renderControls(); renderGrid(); });
+</script>
+</body>
+</html>
