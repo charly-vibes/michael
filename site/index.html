@@ -215,17 +215,26 @@ function solarMode(mode) {
 </script>
 
 <h2>Install</h2>
+<p>
+Installing needs <strong>nothing but Python 3</strong> — the generators are
+stdlib-only. One script installs everything:
+</p>
 <pre><code>git clone https://github.com/charly-vibes/michael.git
 cd michael
-uv sync            # .venv with pillow, pygments
-just install-gnome # terminal profiles + registration
-just install-doom  # Doom Emacs themes
-just install-vscode
-just check         # rebuild + verify all gates</code></pre>
-<p>
-Targets: GNOME Terminal (16-slot palette + <code>bold-is-bright</code>),
-Doom Emacs (<code>doom-michael-light</code> / <code>doom-michael-dark</code>),
-VS Code JSON themes.
+./install.sh</code></pre>
+<table>
+  <tr><th>target</th><th>activate</th></tr>
+  <tr><td>GNOME Terminal</td><td>Preferences → Profiles → <strong>michael light/dark</strong></td></tr>
+  <tr><td>Doom Emacs</td><td><code>(custom-set-variables '(doom-theme 'doom-michael-dark))</code></td></tr>
+  <tr><td>VS Code</td><td>Preferences: Color Theme → <strong>michael light/dark</strong></td></tr>
+  <tr><td>Ghostty</td><td><code>theme = light:michael-light,dark:michael-dark</code></td></tr>
+  <tr><td>Windows Terminal</td><td>merge <code>michael-schemes.json</code>, set <code>colorScheme</code></td></tr>
+</table>
+<p class="faint">
+Pick targets with <code>./install.sh gnome ghostty windows</code>.
+The eval pipeline (renders, gates, vision eval) additionally uses
+<a href="https://docs.astral.sh/uv/">uv</a> — optional unless you want to hack
+on the theme.
 </p>
 
 <h2>Gallery</h2>
