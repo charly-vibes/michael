@@ -49,18 +49,42 @@ color themes. Headline results live in `corpus/eval-report.md`;
 
 ## Install
 
-```sh
-uv sync               # set up .venv
-just build            # regenerate out/
-just check            # build + gates + render corpus
-just lint             # ruff
+Installing needs **nothing but Python 3** — the generators are stdlib-only.
+`uv`/`just` are only needed for the eval pipeline and gate checks.
 
-just install-gnome    # terminal profiles + ProfilesList registration
-just install-doom     # ~/.doom.d/themes/
-just install-vscode
+```sh
+git clone https://github.com/charly-vibes/michael.git
+cd michael
+./install.sh                    # everything except Windows Terminal
 ```
 
-After `install-gnome`, pick *michael light/dark* in Terminal preferences.
+Or pick targets explicitly:
+
+```sh
+./install.sh gnome doom vscode ghostty
+./install.sh windows            # prints merge instructions for settings.json
+```
+
+| target | activate |
+|---|---|
+| GNOME Terminal | Preferences → Profiles → *michael light/dark* (cursor bar, blink off, bold-is-bright preset) |
+| Doom Emacs | `(custom-set-variables '(doom-theme 'doom-michael-dark))` |
+| VS Code | Preferences: Color Theme → *michael light/dark* |
+| Ghostty | add `theme = light:michael-light,dark:michael-dark` to `~/.config/ghostty/config` |
+| Windows Terminal | merge `out/windows-terminal/michael-schemes.json` into `settings.json` → `schemes`, set `"colorScheme": "michael dark"` |
+
+On Windows without a shell: `python generators/windows_terminal.py` works
+with plain CPython, then merge the emitted JSON.
+
+### Dev tooling (optional)
+
+```sh
+uv sync               # .venv: pillow, pygments, ruff (eval pipeline only)
+just build            # regenerate out/
+just check            # build + gates + render corpus
+just eval-quick       # light vision eval
+just lint             # ruff
+```
 
 ## Terminal palette design
 
@@ -81,7 +105,8 @@ truth, shared with the eval's console-session renderer).
 | `bench/eval.py` | blind vision eval via headless pi + OpenRouter |
 | `bench/ansi.py` | ANSI slot map (single source of truth) |
 | `bench/baselines.py` | Solarized / Flexoki baselines + canonical ANSI palettes |
-| `generators/` | GNOME Terminal dconf, Doom deftheme, VS Code JSON |
+| `generators/` | GNOME Terminal dconf, Ghostty, Windows Terminal schemes, Doom deftheme, VS Code JSON |
+| `install.sh` | dependency-free installer (stdlib-only generators) |
 | `notes/eval-experiments.org` | experiment log |
 | `site/` | GitHub Pages showcase |
 

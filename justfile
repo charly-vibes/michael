@@ -5,6 +5,8 @@ build:
     uv run generators/gnome_terminal.py
     uv run generators/doom_emacs.py
     uv run generators/vscode.py
+    uv run generators/ghostty.py
+    uv run generators/windows_terminal.py
 
 # Run benchmark gates + render corpus PNGs (full and 4-bit e-ink simulation)
 check: build
