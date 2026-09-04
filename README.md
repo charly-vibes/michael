@@ -76,6 +76,10 @@ Or pick targets explicitly:
 On Windows without a shell: `python generators/windows_terminal.py` works
 with plain CPython, then merge the emitted JSON.
 
+**Bonus — highlight.js theme:** `generators/highlightjs.py` emits
+`michael-{light,dark}.css` for any highlight.js-based blog or docs site.
+The live demo is on the site ("Live code — not an image").
+
 ### Dev tooling (optional)
 
 ```sh
@@ -105,7 +109,7 @@ truth, shared with the eval's console-session renderer).
 | `bench/eval.py` | blind vision eval via headless pi + OpenRouter |
 | `bench/ansi.py` | ANSI slot map (single source of truth) |
 | `bench/baselines.py` | Solarized / Flexoki baselines + canonical ANSI palettes |
-| `generators/` | GNOME Terminal dconf, Ghostty, Windows Terminal schemes, Doom deftheme, VS Code JSON |
+| `generators/` | GNOME Terminal dconf, Ghostty, Windows Terminal schemes, Doom deftheme, VS Code JSON, highlight.js CSS |
 | `install.sh` | dependency-free installer (stdlib-only generators) |
 | `notes/eval-experiments.org` | experiment log |
 | `site/` | GitHub Pages showcase |

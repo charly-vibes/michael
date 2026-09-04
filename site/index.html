@@ -55,6 +55,7 @@
   .win { color: var(--ink); font-weight: 700; }
   footer { color: var(--faint); margin-top: 4rem; border-top: 1px solid var(--sel); padding-top: 1rem; font-size: .85rem; }
 </style>
+<link rel="stylesheet" href="assets/michael-hljs.css">
 </head>
 <body>
 <main>
@@ -111,6 +112,25 @@ maps by answering three binary questions instead of "pick a gray":
 <p>
 In the terminal, <code>bold-is-bright</code> doubles the weight channel as a
 brightness escape hatch across all 16 ANSI slots.
+</p>
+
+<h2>Live code — not an image</h2>
+<p>
+The renders below are PNGs from our eval pipeline. This section is
+<strong>actual highlighted text</strong> using our generated
+<a href="https://highlightjs.org/">highlight.js</a> theme — the same grammar,
+the same values, live in your browser. Toggle the variant:
+<button class="pill on" id="codeLight" onclick="codeVariant('light')">light</button>
+<button class="pill" id="codeDark" onclick="codeVariant('dark')">dark</button>
+</p>
+<div id="langPills" style="margin:.8rem 0"></div>
+<div data-michael="light" id="codeBox">
+  <pre style="background:transparent"><code class="hljs" id="codeTarget"></code></pre>
+</div>
+<p class="faint">
+The generated CSS ships as <code>site/assets/michael-hljs.css</code> and
+<code>out/highlightjs/michael-{light,dark}.css</code> — drop-in themes for any
+highlight.js-based blog or docs site.
 </p>
 
 <h2>Showcase</h2>
@@ -261,5 +281,7 @@ michael — authored gray. gates pass or it doesn't ship.
 </footer>
 
 </main>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+<script src="assets/live-code.js"></script>
 </body>
 </html>
