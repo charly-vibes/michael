@@ -94,6 +94,54 @@ public sealed class Cart
     public decimal Net => _lines.Sum(l => l.Price * l.Qty);
     public decimal Gross() => decimal.Round(Net * (1 + TaxRate), 2);
 }`,
+  css: `/* panel chrome — muted comment */
+.panel {
+  display: flex;
+  gap: 0.5rem;
+  border: 1px solid var(--sel);
+  opacity: 0.96;
+}
+.panel:focus { outline: 1px dotted; }`,
+  html: `<!DOCTYPE html>
+<html lang="en">
+  <!-- inspector shell — faint comment -->
+  <head>
+    <meta charset="utf-8">
+    <title>michael</title>
+  </head>
+  <body class="grayscale">
+    <input type="url" spellcheck="false">
+  </body>
+</html>`,
+  xml: `<?xml version="1.0" encoding="UTF-8"?>
+<!-- profile: michael-dark -->
+<theme name="michael" variant="dark">
+  <color role="ink" hex="#F5F5F5" />
+  <color role="muted" hex="#7A7A7A" />
+</theme>`,
+  json: `{"name": "michael",
+ "levels": ["ink", "strong", "fg", "muted", "faint"],
+ "gates": {"contrast": 10.0, "spacing": 0.10},
+ "eink_floor": true,
+ "notes": null}`,
+  yaml: `# eval: median-of-3 grading
+theme: michael
+variants:
+  light: {bg: "#F5F5F5", fg: "#505050"}
+  dark:  {bg: "#070707", fg: "#9B9B9B"}
+gates:
+  contrast_min: 7.0
+  eink: 4-bit quantization`,
+  toml: `# ghostty config — michael dark
+theme = "michael-dark"
+
+[window]
+opacity = 0.96
+padding-x = 8
+
+[cursor]
+style = "block"
+blink = false`,
 };
 
 function setLang(lang) {
