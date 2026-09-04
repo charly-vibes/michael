@@ -49,6 +49,14 @@
   }
   .pill:hover { color: var(--strong); border-color: var(--muted); }
   .pill.on { color: var(--ink); border-color: var(--ink); background: var(--sel); }
+  .cta {
+    display: inline-block; border: 1px solid var(--ink); background: var(--sel);
+    color: var(--ink); padding: .55rem 1.2rem; border-radius: 999px;
+    font-weight: 700; text-decoration: none; transition: all .15s;
+  }
+  .cta:hover { background: var(--bg-alt); }
+  .cta.secondary { border-color: var(--muted); color: var(--strong); font-weight: 400; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.2rem 0 .3rem; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
   @media (max-width: 720px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
@@ -62,6 +70,13 @@
 
 <h1>michael</h1>
 <p class="tagline">a grayscale theme for grayscale-forced displays — terminal first</p>
+
+<div class="cta-row">
+  <a class="cta" href="#install">Install</a>
+  <a class="cta secondary" href="inspect.html" title="Highlight any public GitHub file in michael — live, no install needed">Try the inspector</a>
+  <a class="cta secondary" href="gallery.html">Browse the gallery</a>
+</div>
+<p class="faint" style="margin-top:.3rem">The inspector highlights any public GitHub file in michael — no install needed.</p>
 
 <p>
 Most themes assume color. On a screen forced to grayscale — desktop monitor or
@@ -234,12 +249,18 @@ function solarMode(mode) {
 }
 </script>
 
-<h2>Install</h2>
+<h2 id="install">Install</h2>
 <p>
 Installing needs <strong>nothing but Python 3</strong> — the generators are
-stdlib-only. One script installs everything:
+stdlib-only. With no arguments it installs every target at once
+(GNOME Terminal, Doom Emacs, VS Code, Ghostty); pass the targets you want
+to install a subset:
 </p>
-<pre><code>git clone https://github.com/charly-vibes/michael.git
+<div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0">
+  <button class="pill" id="copyBtn" onclick="copyInstall()">copy commands</button>
+  <span id="copyMsg" class="faint" style="font-size:.8rem"></span>
+</div>
+<pre id="installCmd"><code>git clone https://github.com/charly-vibes/michael.git
 cd michael
 ./install.sh</code></pre>
 <table>
@@ -272,8 +293,8 @@ Flexoki colorsets your display destroys.
 <h2>Links</h2>
 <p>
 <a href="https://github.com/charly-vibes/michael">Repository</a> ·
-<a href="gallery.html">Gallery</a> ·
-<a href="inspect.html">Inspector</a> ·
+<a href="gallery.html">Gallery</a> (every render) ·
+<a href="inspect.html">Inspector</a> (live-highlight any GitHub file) ·
 <a href="https://github.com/charly-vibes/michael/blob/main/ramp.json">ramp.json</a> ·
 <a href="https://github.com/charly-vibes/michael/blob/main/tokens.json">tokens.json</a> ·
 <a href="https://github.com/charly-vibes/michael/blob/main/corpus/eval-report.md">eval report</a>
@@ -289,5 +310,24 @@ michael — authored gray. gates pass or it doesn't ship.
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/julia.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/clojure.min.js"></script>
 <script src="assets/live-code.js"></script>
+<script>
+function copyInstall() {
+  const text = document.getElementById('installCmd').innerText;
+  const done = () => {
+    document.getElementById('copyMsg').textContent = 'copied ✓';
+    setTimeout(() => { document.getElementById('copyMsg').textContent = ''; }, 1500);
+  };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) {}
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  } else { fallback(); }
+}
+</script>
 </body>
 </html>
