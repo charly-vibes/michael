@@ -27,6 +27,32 @@ RENDER_DIR = os.path.join(HERE, '..', 'corpus', 'render')
 LANGS = ('console', 'typescript', 'clojure', 'python', 'julia', 'rust', 'csharp')
 CLASSES = ('keywords', 'types', 'function_names', 'strings', 'numbers', 'comments', 'punctuation')
 
+CONSOLE_CLASSES = ('added', 'removed', 'modified', 'untracked', 'dirs', 'executables', 'highlight', 'dim_text')
+
+CONSOLE_RUBRIC = f"""You are grading a TERMINAL color theme rendered as a screenshot of a shell \
+session (git status, ls -la, grep, git diff). The image may be color or \
+grayscale; grade ONLY what is visible.
+
+For EACH state below, judge how visually distinct it is from surrounding text:
+{', '.join(CONSOLE_CLASSES)}.
+
+Score each state 0-3:
+- 3 = instantly distinguishable at a glance
+- 2 = distinguishable with attention
+- 1 = confusable with surrounding text
+- 0 = indistinguishable from surrounding text
+
+Then:
+- "closest_pair": the two states MOST confusable with each other
+- "root_cause": the single most impactful change for this terminal render
+- "separation": 0-5 overall state separation
+- "readability": 0-5 comfort reading this terminal output
+- "notes": one short sentence, max 20 words.
+
+Answer with ONLY a JSON object, no markdown fences:
+{{"classes": {{"added": {{"distinct": 0, "notes": "..."}}, ...}}, "closest_pair": "...", "root_cause": "...", "separation": 0, "readability": 0, "notes": "..."}}"""
+
+
 RUBRIC = f"""You are grading a code-editor theme rendered as a screenshot of source code. \
 The image may be color or grayscale; grade ONLY what is visible in the image.
 
@@ -77,11 +103,12 @@ def parse_theme_image(fname):
     return None
 
 
-def run_pi(image_path: str, model: str) -> dict:
+def run_pi(image_path: str, model: str, lang: str = '') -> dict:
     """Ask headless pi to grade one image. Returns parsed verdict dict."""
+    rubric = CONSOLE_RUBRIC if lang == 'console' else RUBRIC
     cmd = ['pi', '-p', '--no-session', '-nt',
            '--provider', 'openrouter', '--model', model,
-           RUBRIC, f'@{image_path}']
+           rubric, f'@{image_path}']
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180, check=False)
         out = proc.stdout.strip()
@@ -117,14 +144,13 @@ def write_report(results, model):
     for (lang, theme, quant), v in results.items():
         if v['separation'] < 0:
             continue
-        t = themes.setdefault(theme, {'sep': [], 'read': [], 'classes': {c: [] for c in CLASSES},
+        t = themes.setdefault(theme, {'sep': [], 'read': [], 'classes': {},
                                       'pairs': Counter(), 'roots': [], 'langs': {}})
         t['sep'].append(v['separation'])
         t['read'].append(v['readability'])
-        for c in CLASSES:
-            entry = v['classes'].get(c)
+        for c, entry in v['classes'].items():
             if entry and 'distinct' in entry:
-                t['classes'][c].append(entry['distinct'])
+                t['classes'].setdefault(c, []).append(entry['distinct'])
         if v.get('closest_pair'):
             t['pairs'][v['closest_pair']] += 1
         if v.get('root_cause'):
@@ -142,7 +168,7 @@ def write_report(results, model):
         lines.append('### Class distinctness (mean 0-3)\n')
         lines.append('| class | distinct | verdict |')
         lines.append('|---|---|---|')
-        for c in CLASSES:
+        for c in sorted(t['classes']):
             m = mean(t['classes'][c])
             verdict = ('solid' if m >= 2.5 else 'weak' if m >= 1.5 else 'BROKEN') if m >= 0 else '?'
             lines.append(f'| {c} | {m:.2f} | {verdict} |')
@@ -202,7 +228,8 @@ def main():
           f'with {args.model}, {args.jobs} at a time\n')
 
     def grade(img):
-        verdicts = [run_pi(img, args.model) for _ in range(args.repeats)]
+        lang = parse_theme_image(os.path.basename(img))[0]
+        verdicts = [run_pi(img, args.model, lang) for _ in range(args.repeats)]
         valid = sorted((v for v in verdicts if v['separation'] >= 0),
                        key=lambda v: v['separation'])
         if not valid:
@@ -232,19 +259,28 @@ def main():
 
     save()
 
-    # console summary: per-theme weak classes
+    # console summary: per-theme class means (rubric-agnostic class set)
     print('\n=== PER-CLASS DIAGNOSTICS (theme means, 0-3) ===')
+    by_theme = {}
+    class_order = []
+    for (lang, theme, quant), v in results.items():
+        if v['separation'] < 0:
+            continue
+        for c in v['classes']:
+            if c not in class_order:
+                class_order.append(c)
     by_theme = {}
     for (lang, theme, quant), v in results.items():
         if v['separation'] < 0:
             continue
-        t = by_theme.setdefault(theme, {c: [] for c in CLASSES})
-        for c in CLASSES:
+        t = by_theme.setdefault(theme, {})
+        for c in class_order:
+            t.setdefault(c, [])
             entry = v['classes'].get(c)
             if entry and 'distinct' in entry:
                 t[c].append(entry['distinct'])
     for theme, t in sorted(by_theme.items()):
-        cells = ' '.join(f'{c[:4]}={mean(t[c]):.1f}' for c in CLASSES)
+        cells = ' '.join(f'{c[:4]}={mean(t[c]):.1f}' for c in class_order)
         print(f'{theme:24s} {cells}')
 
     write_report(results, args.model)
