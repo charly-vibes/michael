@@ -67,6 +67,11 @@
     <button class="pill on" data-q="both">both</button>
     <button class="pill" data-q="full">full</button>
     <button class="pill" data-q="4bit">4-bit</button>
+    <span class="sep"></span>
+    <span class="faint">render:</span>
+    <button class="pill on" data-m="all">all</button>
+    <button class="pill" data-m="gray">grayscale</button>
+    <button class="pill" data-m="color" title="authentic colorsets of the baselines — what your display destroys">color originals</button>
     <span class="count" id="count"></span>
   </div>
 </header>
@@ -86,7 +91,7 @@
 <script>
 const LANGS = ['console', 'python', 'julia', 'rust', 'typescript', 'clojure', 'csharp'];
 let manifest = [];
-const state = { lang: 'all', theme: 'all', quant: 'both' };
+const state = { lang: 'all', theme: 'all', quant: 'both', mode: 'all' };
 
 function pill(label, active, onclick) {
   const b = document.createElement('button');
@@ -119,7 +124,8 @@ function renderGrid() {
   const shown = manifest.filter(e =>
     (state.lang === 'all' || e.lang === state.lang) &&
     (state.theme === 'all' || e.theme === state.theme) &&
-    (state.quant === 'both' || e.quant === state.quant));
+    (state.quant === 'both' || e.quant === state.quant) &&
+    (state.mode === 'all' || (e.mode || 'gray') === state.mode));
 
   for (const e of shown) {
     const card = document.createElement('div');
@@ -130,7 +136,8 @@ function renderGrid() {
     img.alt = e.lang + ' — ' + e.theme;
     const cap = document.createElement('div');
     cap.className = 'cap';
-    cap.innerHTML = `<span class="theme">${e.lang} · ${e.theme}</span><span class="q">${e.quant}</span>`;
+    const colorTag = (e.mode === 'color') ? ' · <span style="color:var(--ink)">original colorset</span>' : '';
+    cap.innerHTML = `<span class="theme">${e.lang} · ${e.theme}${colorTag}</span><span class="q">${e.quant}</span>`;
     card.append(img, cap);
     grid.appendChild(card);
   }
@@ -140,9 +147,14 @@ function renderGrid() {
 
 document.querySelectorAll('#quantRow .pill').forEach(b => {
   b.onclick = () => {
-    document.querySelectorAll('#quantRow .pill').forEach(x => x.classList.remove('on'));
+    const isMode = 'm' in b.dataset;
+    document.querySelectorAll('#quantRow .pill').filter;
+    for (const x of document.querySelectorAll('#quantRow .pill')) {
+      if (('m' in x.dataset) === isMode) x.classList.remove('on');
+    }
     b.classList.add('on');
-    state.quant = b.dataset.q;
+    if (isMode) state.mode = b.dataset.m;
+    else state.quant = b.dataset.q;
     renderGrid();
   };
 });

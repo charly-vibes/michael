@@ -425,6 +425,16 @@ if __name__ == '__main__':
         paths += render_console(theme, theme['ansi16'], out_dir)
         total += len(paths)
         print(f"rendered {name}: {len(CORPUS)} code files + console session")
+
+    # authentic-color copies (gallery only: "this is what gets lost")
+    color_dir = os.path.join(ROOT, 'corpus', 'render-color')
+    os.makedirs(color_dir, exist_ok=True)
+    for name, theme in build_baselines().items():
+        color_theme = dict(theme, grayscale=False)
+        render_theme(color_theme, CORPUS, color_dir)
+        render_console(color_theme, theme['ansi16'], color_dir)
+        print(f"rendered {name} (authentic color) for gallery")
+
     print(f"total images: {total}")
 
     # manifest for the site gallery: filename -> structured metadata
@@ -439,6 +449,18 @@ if __name__ == '__main__':
             'lang': m.group(1),
             'theme': m.group(2),
             'quant': '4bit' if m.group(3) else 'full',
+            'mode': 'gray',
+        })
+    for fname in sorted(os.listdir(color_dir)):
+        m = re.match(r'^(console|typescript|clojure|python|julia|rust|csharp)-(.+?)(?:-(4bit))?\.png$', fname)
+        if not m:
+            continue
+        entries.append({
+            'file': 'color-' + fname,
+            'lang': m.group(1),
+            'theme': m.group(2),
+            'quant': '4bit' if m.group(3) else 'full',
+            'mode': 'color',
         })
     with open(os.path.join(out_dir, 'manifest.json'), 'w') as fh:
         json.dump(entries, fh, indent=2)

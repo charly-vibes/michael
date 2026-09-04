@@ -2,3 +2,4 @@ out/
 .venv/
 corpus/render/
 corpus/eval-results.json
+corpus/render-color/

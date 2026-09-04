@@ -48,6 +48,7 @@ gallery: build
     uv run bench/render.py
     mkdir -p site/assets/gallery
     cp -f corpus/render/*.png site/assets/gallery/
+    for f in corpus/render-color/*.png; do cp -f "$f" "site/assets/gallery/color-$(basename $f)"; done
     cp -f corpus/render/manifest.json site/assets/gallery/
 
 clean:

@@ -43,7 +43,8 @@
   figure img { width: 100%; border-radius: 6px; border: 1px solid var(--sel); display: block; }
   figcaption { color: var(--muted); font-size: .85rem; margin-top: .5rem; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  @media (max-width: 720px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
   .win { color: var(--ink); font-weight: 700; }
   footer { color: var(--faint); margin-top: 4rem; border-top: 1px solid var(--sel); padding-top: 1rem; font-size: .85rem; }
 </style>
@@ -165,15 +166,26 @@ diagnostics and the experiment log live in the repository
 (<code>corpus/eval-report.md</code>, <code>notes/eval-experiments.org</code>).
 </p>
 
-<h3>Grayscale-forced vs authored-gray</h3>
-<div class="grid2">
+<h3>What gets lost when a display forces grayscale</h3>
+<p>
+Solarized's keyword blue and type yellow, its function cyan and constant
+orange — on a grayscale-forced screen those hues are destroyed, and every
+token lands on whatever gray its lightness happens to be. The color story
+below-left becomes the gray story below-middle. michael (right) never had a
+color story to lose: its hierarchy is the gray story, by construction.
+</p>
+<div class="grid3">
+  <figure style="margin:0">
+    <img src="assets/compare-solarized-dark-color.png" alt="Solarized dark, original colorset">
+    <figcaption>Solarized dark — <strong>original colorset</strong> (7 hues carrying the semantics)</figcaption>
+  </figure>
   <figure style="margin:0">
     <img src="assets/compare-solarized-dark-4bit.png" alt="Solarized dark, forced to 16 grays">
-    <figcaption>Solarized dark, forced to 16 grays — hue distinctions gone</figcaption>
+    <figcaption>same theme, forced to gray — keyword blue and type yellow collapse toward each other</figcaption>
   </figure>
   <figure style="margin:0">
     <img src="assets/compare-michael-dark-4bit.png" alt="michael dark at 16 grays">
-    <figcaption>michael dark at 16 grays — designed for exactly this</figcaption>
+    <figcaption>michael dark — <strong>authored gray</strong>: five levels plus weight/style, gate-checked</figcaption>
   </figure>
 </div>
 
@@ -193,10 +205,12 @@ VS Code JSON themes.
 
 <h2>Gallery</h2>
 <p>
-All 84 renders — six languages plus a console session, light and dark, full
+All renders — six languages plus a console session, light and dark, full
 fidelity and 4-bit, across michael and both baselines — are browsable in the
 <a href="gallery.html"><strong>gallery</strong></a>. Filter by language and
-theme, flip quantization to see the e-ink floor test.
+theme, flip quantization to see the e-ink floor test, and switch
+<strong>render: color originals</strong> to see the authentic Solarized and
+Flexoki colorsets your display destroys.
 </p>
 
 <h2>Links</h2>
