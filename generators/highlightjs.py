@@ -44,7 +44,7 @@ def css_for(variant, v, scope=''):
         props = [f'color: {color}']
         if weight: props.append(f'font-weight: {weight}')
         if style: props.append(f'font-style: {style}')
-        selectors = [f'{scope}.{c.strip().lstrip(".")}' for c in sel.split(',')]
+        selectors = [f'{scope} .{c.strip().lstrip(".")}' for c in sel.split(',')]
         joined = ', '.join(selectors)
         rules.append(f'{joined} {{ {"; ".join(props)}; }}')
 
